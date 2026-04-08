@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAA Lab: Graph Algorithms</title>
+<style>
+:root{
+  --bg:#050811;--card:#0d1528;--border:rgba(99,179,255,0.12);
+  --accent:#f59e0b;--accent2:#3b82f6;--text:#e2e8f0;--muted:#64748b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;padding-bottom:40px;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;
+}
+
+/* ── BACK BTN ── */
+.back-btn{
+  position:fixed;top:18px;left:20px;z-index:9999;
+  display:flex;align-items:center;gap:8px;padding:9px 18px;
+  background:rgba(13,21,40,0.85);border:1px solid rgba(99,179,255,0.2);
+  border-radius:8px;color:#93c5fd;font-family:'Courier New',monospace;
+  font-size:0.78rem;font-weight:700;letter-spacing:1px;text-decoration:none;
+  backdrop-filter:blur(12px);transition:all 0.2s;
+}
+.back-btn:hover{background:rgba(59,130,246,0.15);border-color:rgba(99,179,255,0.45);color:#bfdbfe;transform:translateX(-2px)}
+.page-transition{position:fixed;inset:0;background:#050811;z-index:99999;pointer-events:none;opacity:0;transition:opacity 0.35s ease}
+.page-transition.active{opacity:1;pointer-events:all}
+
+header{position:relative;z-index:1;text-align:center;padding:70px 20px 20px;width:100%}
+header h1{font-size:1.8rem;font-weight:800;color:var(--accent);margin-bottom:6px}
+header p{color:var(--muted);font-size:0.9rem}
+
+.main-layout{
+  position:relative;z-index:1;display:flex;gap:16px;
+  width:100%;max-width:1240px;padding:0 16px;flex-wrap:wrap;justify-content:center;
+}
+
+/* ── CANVAS AREA ── */
+.canvas-col{display:flex;flex-direction:column;gap:10px}
+canvas#graphCanvas{
+  background:#060e1c;border:1px solid var(--border);
+  border-radius:12px;cursor:crosshair;touch-action:none;display:block;
+}
+.hint{
+  font-size:0.75rem;color:var(--muted);font-family:'Courier New',monospace;
+  text-align:center;padding:6px 10px;background:var(--card);
+  border:1px solid var(--border);border-radius:8px;
+}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:20px;width:268px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;
+}
+.sidebar h3{
+  font-size:0.75rem;letter-spacing:3px;color:var(--accent);text-transform:uppercase;
+  font-family:'Courier New',monospace;margin-bottom:2px;
+}
+.btn-group{display:flex;flex-direction:column;gap:7px}
+.btn{
+  padding:9px 14px;border:none;border-radius:7px;font-size:0.83rem;
+  font-weight:700;cursor:pointer;transition:all 0.2s;text-align:left;
+  font-family:'Segoe UI',sans-serif;
+}
+.btn-mode{background:rgba(245,158,11,0.12);color:#fcd34d;border:1px solid rgba(245,158,11,0.3)}
+.btn-mode.active,.btn-mode:hover{background:rgba(245,158,11,0.25);border-color:rgba(245,158,11,0.6);transform:translateX(3px)}
+.btn-algo{background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.3)}
+.btn-algo:hover{background:rgba(59,130,246,0.22);border-color:rgba(59,130,246,0.55)}
+.btn-clear{background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+.btn-clear:hover{background:rgba(239,68,68,0.22)}
+.btn-sample{background:rgba(100,116,139,0.12);color:#94a3b8;border:1px solid rgba(100,116,139,0.3)}
+.btn-sample:hover{background:rgba(100,116,139,0.22)}
+
+.sep{height:1px;background:var(--border);margin:2px 0}
+.input-row{display:flex;flex-direction:column;gap:4px}
+.input-row label{font-size:0.73rem;color:var(--muted)}
+.input-row input{
+  background:#0a1220;border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:0.85rem;
+  font-family:'Courier New',monospace;width:100%;
+}
+.speed-row{display:flex;align-items:center;gap:8px}
+.speed-row input[type=range]{flex:1;cursor:pointer;accent-color:var(--accent)}
+.speed-row span{font-family:'Courier New',monospace;font-size:0.75rem;color:var(--accent);min-width:18px;text-align:right}
+
+.log-box{
+  background:#040a14;border:1px solid var(--border);border-radius:8px;
+  padding:10px;height:200px;overflow-y:auto;
+  font-family:'Courier New',monospace;font-size:0.71rem;color:#64748b;
+}
+.log-entry{margin-bottom:2px;line-height:1.55}
+.log-entry.info{color:#93c5fd}
+.log-entry.ok{color:#6ee7b7}
+.log-entry.warn{color:#fcd34d}
+.log-entry.edge{color:#f9a8d4}
+.log-entry.path{color:#a78bfa;font-weight:700}
+
+.stats-row{display:flex;gap:8px}
+.stat-box{background:#040a14;border:1px solid var(--border);border-radius:7px;padding:8px 10px;flex:1;text-align:center}
+.stat-box .sv{font-family:'Courier New',monospace;font-size:1.05rem;font-weight:700;color:var(--accent)}
+.stat-box .sl{font-size:0.62rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.68rem;color:var(--muted)}
+.leg-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid transparent;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="page-transition" id="pg-transition"></div>
+<a class="back-btn" href="index.html" onclick="goHome(event)">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <path d="M19 12H5M12 19l-7-7 7-7"/>
+  </svg>BACK TO HOME
+</a>
+
+<header>
+  <h1>Graph Algorithms Visualizer</h1>
+  <p>Build a graph interactively · Run BFS · DFS · Dijkstra (all-pairs shortest distance from start)</p>
+</header>
+
+<div class="main-layout">
+
+  <!-- ── CANVAS ── -->
+  <div class="canvas-col">
+    <canvas id="graphCanvas" width="720" height="500"></canvas>
+    <p class="hint" id="hint">Mode: <strong>Add Node</strong> — Click canvas to place a node</p>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#1e3a5f;border-color:#3b82f6"></div>Default</div>
+      <div class="leg"><div class="leg-dot" style="background:#d97706;border-color:#fbbf24"></div>Current</div>
+      <div class="leg"><div class="leg-dot" style="background:#7c3aed;border-color:#a78bfa"></div>Visited / Finalized</div>
+      <div class="leg"><div class="leg-dot" style="background:#065f46;border-color:#10b981"></div>Path (BFS/DFS)</div>
+      <div class="leg"><div class="leg-dot" style="background:#1e3a5f;border-color:#f59e0b"></div>Start</div>
+      <div class="leg"><div class="leg-dot" style="background:#3b1f5f;border-color:#ec4899"></div>Goal</div>
+    </div>
+  </div>
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+
+    <h3>Edit Mode</h3>
+    <div class="btn-group">
+      <button class="btn btn-mode active" id="modeNode"   onclick="setMode('node')">➕ Add Node</button>
+      <button class="btn btn-mode"        id="modeEdge"   onclick="setMode('edge')">🔗 Add Edge</button>
+      <button class="btn btn-mode"        id="modeDel"    onclick="setMode('delete')">🗑 Delete</button>
+    </div>
+
+    <div class="input-row" id="weightInput" style="display:none">
+      <label>Edge Weight</label>
+      <input type="number" id="edgeWeight" value="1" min="1" max="99">
+    </div>
+
+    <div class="sep"></div>
+
+    <h3>Nodes</h3>
+    <div class="input-row">
+      <label>Start ID</label>
+      <input type="number" id="startNode" value="0" min="0">
+    </div>
+    <div class="input-row" id="goalRow">
+      <label>Goal ID <span style="color:#a78bfa;font-size:0.68rem">(BFS / DFS path)</span></label>
+      <input type="number" id="goalNode" value="3" min="0">
+    </div>
+    <p style="font-size:0.68rem;color:var(--muted);line-height:1.5" id="algoHint">
+      BFS/DFS trace the shortest path to the Goal node. Dijkstra computes distances from Start to <em>all</em> nodes.
+    </p>
+
+    <div class="sep"></div>
+
+    <h3>Run Algorithm</h3>
+    <div class="btn-group">
+      <button class="btn btn-algo" onclick="runAlgo('bfs')">🔵 BFS</button>
+      <button class="btn btn-algo" onclick="runAlgo('dfs')">🟣 DFS</button>
+      <button class="btn btn-algo" onclick="runAlgo('dijkstra')">🟡 Dijkstra (Shortest Distance from Start)</button>
+    </div>
+
+    <div class="sep"></div>
+
+    <h3>Speed</h3>
+    <div class="speed-row">
+      <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+      <span id="speedVal">5</span>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-clear"  onclick="clearGraph()">🗑 Clear Graph</button>
+      <button class="btn btn-sample" onclick="loadSample()">📋 Load Sample</button>
+    </div>
+
+    <div class="sep"></div>
+
+    <h3>Stats</h3>
+    <div class="stats-row">
+      <div class="stat-box"><div class="sv" id="statNodes">0</div><div class="sl">Nodes</div></div>
+      <div class="stat-box"><div class="sv" id="statEdges">0</div><div class="sl">Edges</div></div>
+      <div class="stat-box"><div class="sv" id="statSteps">0</div><div class="sl">Steps</div></div>
+    </div>
+
+    <div class="sep"></div>
+
+    <h3>Log</h3>
+    <div class="log-box" id="logBox"></div>
+
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+const canvas = document.getElementById('graphCanvas');
+const ctx    = canvas.getContext('2d');
+
+let nodes       = [];
+let edges       = [];
+let mode        = 'node';
+let edgeSrc     = null;
+let animRunning = false;
+let animSpeed   = 5;
+let steps       = 0;
+
+const NODE_R = 22;
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function log(msg, type = 'info') {
+  const b = document.getElementById('logBox');
+  const d = document.createElement('div');
+  d.className = `log-entry ${type}`;
+  d.textContent = msg;
+  b.appendChild(d);
+  b.scrollTop = b.scrollHeight;
+}
+function clearLog() { document.getElementById('logBox').innerHTML = ''; }
+
+function updateStats() {
+  document.getElementById('statNodes').textContent = nodes.length;
+  document.getElementById('statEdges').textContent = edges.length;
+  document.getElementById('statSteps').textContent = steps;
+}
+
+function updateSpeed(v) {
+  animSpeed = parseInt(v);
+  document.getElementById('speedVal').textContent = v;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function delay() { return Math.max(30, (11 - animSpeed) * 70); }
+
+/* ════════════════════════════════════════
+   MODES
+════════════════════════════════════════ */
+function setMode(m) {
+  mode    = m;
+  edgeSrc = null;
+  document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+  const id = 'mode' + m.charAt(0).toUpperCase() + m.slice(1);
+  document.getElementById(id)?.classList.add('active');
+  document.getElementById('weightInput').style.display = (m === 'edge') ? 'flex' : 'none';
+  const hints = {
+    node   : 'Click canvas to place a node',
+    edge   : 'Click a source node, then click the destination',
+    delete : 'Click a node or edge to remove it',
+  };
+  document.getElementById('hint').innerHTML =
+    `Mode: <strong>${m.charAt(0).toUpperCase() + m.slice(1)}</strong> — ${hints[m]}`;
+  draw();
+}
+
+/* ════════════════════════════════════════
+   HIT TESTING
+════════════════════════════════════════ */
+function nodeAt(x, y) {
+  return nodes.find(n => Math.hypot(n.x - x, n.y - y) < NODE_R + 4);
+}
+
+function edgeAt(x, y) {
+  for (const e of edges) {
+    const na = nodes.find(n => n.id === e.a);
+    const nb = nodes.find(n => n.id === e.b);
+    if (!na || !nb) continue;
+    const dx = nb.x - na.x, dy = nb.y - na.y;
+    const len = Math.hypot(dx, dy);
+    if (len === 0) continue;
+    const t = Math.max(0, Math.min(1, ((x - na.x) * dx + (y - na.y) * dy) / (len * len)));
+    const dist = Math.hypot(x - (na.x + t * dx), y - (na.y + t * dy));
+    if (dist < 9) return e;
+  }
+  return null;
+}
+
+/* ════════════════════════════════════════
+   CANVAS EVENTS
+════════════════════════════════════════ */
+canvas.addEventListener('click', e => {
+  if (animRunning) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if (mode === 'node') {
+    if (nodeAt(x, y)) return;
+    const id = nodes.length ? Math.max(...nodes.map(n => n.id)) + 1 : 0;
+    nodes.push({ id, x, y, state: 'default' });
+    log(`Added node ${id}`, 'info');
+    updateStats(); draw();
+
+  } else if (mode === 'edge') {
+    const n = nodeAt(x, y);
+    if (!n) return;
+    if (!edgeSrc) { edgeSrc = n; draw(); return; }
+    if (edgeSrc.id === n.id) { edgeSrc = null; draw(); return; }
+    if (edges.find(e => (e.a === edgeSrc.id && e.b === n.id) || (e.a === n.id && e.b === edgeSrc.id))) {
+      edgeSrc = null; draw(); return;
+    }
+    const w = parseInt(document.getElementById('edgeWeight').value) || 1;
+    edges.push({ a: edgeSrc.id, b: n.id, w, state: 'default' });
+    log(`Edge ${edgeSrc.id} ↔ ${n.id}  (w=${w})`, 'edge');
+    edgeSrc = null;
+    updateStats(); draw();
+
+  } else if (mode === 'delete') {
+    const n = nodeAt(x, y);
+    if (n) {
+      nodes = nodes.filter(nd => nd.id !== n.id);
+      edges = edges.filter(e => e.a !== n.id && e.b !== n.id);
+      log(`Deleted node ${n.id}`, 'warn');
+      updateStats(); draw(); return;
+    }
+    const ed = edgeAt(x, y);
+    if (ed) {
+      edges = edges.filter(e => e !== ed);
+      log(`Deleted edge ${ed.a} ↔ ${ed.b}`, 'warn');
+      updateStats(); draw();
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (mode !== 'edge' || !edgeSrc) return;
+  const rect = canvas.getBoundingClientRect();
+  draw();
+  ctx.beginPath();
+  ctx.moveTo(edgeSrc.x, edgeSrc.y);
+  ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  ctx.strokeStyle = 'rgba(245,158,11,0.5)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+});
+
+/* ════════════════════════════════════════
+   DRAW
+════════════════════════════════════════ */
+function getStartId() { return parseInt(document.getElementById('startNode').value) || 0; }
+function getGoalId()  { return parseInt(document.getElementById('goalNode').value)  || 0; }
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* edges */
+  for (const e of edges) {
+    const na = nodes.find(n => n.id === e.a);
+    const nb = nodes.find(n => n.id === e.b);
+    if (!na || !nb) continue;
+
+    ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
+    ctx.strokeStyle =
+      e.state === 'path'    ? '#10b981' :
+      e.state === 'visited' ? 'rgba(167,139,250,0.65)' :
+                              'rgba(99,179,255,0.22)';
+    ctx.lineWidth = e.state === 'path' ? 3.5 : e.state === 'visited' ? 2 : 1.5;
+    ctx.stroke();
+
+    /* weight label */
+    const mx = (na.x + nb.x) / 2, my = (na.y + nb.y) / 2;
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#0d1528';
+    ctx.fillRect(mx - 9, my - 9, 18, 14);
+    ctx.fillStyle = e.state === 'path' ? '#10b981' : '#64748b';
+    ctx.fillText(e.w, mx, my - 2);
+  }
+
+  /* nodes */
+  const startId = getStartId();
+  const goalId  = getGoalId();
+
+  for (const n of nodes) {
+    const isStart = n.id === startId;
+    const isGoal  = n.id === goalId;
+
+    /* fill colour */
+    let fill   = '#1e3a5f';
+    let stroke = '#3b82f6';
+    if      (n.state === 'current') { fill = '#d97706'; stroke = '#fbbf24'; }
+    else if (n.state === 'path')    { fill = '#065f46'; stroke = '#10b981'; }
+    else if (n.state === 'visited') { fill = '#7c3aed'; stroke = '#a78bfa'; }
+
+    ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 2.5; ctx.stroke();
+
+    /* start ring */
+    if (isStart) {
+      ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    /* goal ring */
+    if (isGoal) {
+      ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ec4899'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    /* edge-src highlight */
+    if (edgeSrc && edgeSrc.id === n.id) {
+      ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.stroke();
+    }
+
+    /* node id */
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 13px Segoe UI';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.id, n.x, n.y);
+
+    /* distance label (Dijkstra) */
+    if (n.dist !== undefined && n.dist !== Infinity) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '10px Courier New';
+      ctx.textBaseline = 'top';
+      ctx.fillText('d=' + n.dist, n.x, n.y + NODE_R + 4);
+    }
+  }
+}
+
+/* ════════════════════════════════════════
+   STATE RESET
+════════════════════════════════════════ */
+function resetStates() {
+  nodes.forEach(n => { n.state = 'default'; delete n.dist; delete n.prev; });
+  edges.forEach(e => e.state = 'default');
+  steps = 0;
+  updateStats();
+}
+
+function getNeighbors(n) {
+  const out = [];
+  for (const e of edges) {
+    if (e.a === n.id) {
+      const nb = nodes.find(nd => nd.id === e.b);
+      if (nb) out.push({ node: nb, edge: e, w: e.w });
+    } else if (e.b === n.id) {
+      const nb = nodes.find(nd => nd.id === e.a);
+      if (nb) out.push({ node: nb, edge: e, w: e.w });
+    }
+  }
+  return out;
+}
+
+/* ════════════════════════════════════════
+   RUN DISPATCHER
+════════════════════════════════════════ */
+async function runAlgo(type) {
+  if (animRunning) { log('Already running!', 'warn'); return; }
+  if (nodes.length === 0) { log('Add nodes first', 'warn'); return; }
+
+  animRunning = true;
+  clearLog();
+  resetStates();
+  draw();
+
+  const startId   = getStartId();
+  const goalId    = getGoalId();
+  const startNode = nodes.find(n => n.id === startId) || nodes[0];
+
+  log(`▶ Running ${type.toUpperCase()}...`, 'ok');
+
+  if (type === 'bfs') {
+    const goalNode = nodes.find(n => n.id === goalId);
+    if (!goalNode) { log(`Goal node ${goalId} not found`, 'warn'); animRunning = false; return; }
+    await bfs(startNode, goalNode);
+  } else if (type === 'dfs') {
+    const goalNode = nodes.find(n => n.id === goalId);
+    if (!goalNode) { log(`Goal node ${goalId} not found`, 'warn'); animRunning = false; return; }
+    await dfsRun(startNode, goalNode);
+  } else if (type === 'dijkstra') {
+    await dijkstra(startNode);
+  }
+
+  animRunning = false;
+  log('Done ✓', 'ok');
+  updateStats();
+}
+
+/* ════════════════════════════════════════
+   BFS  (with goal path reconstruction)
+════════════════════════════════════════ */
+async function bfs(start, goal) {
+  const visited = new Set([start.id]);
+  const parent  = new Map([[start.id, null]]);   /* child → parent node */
+  const queue   = [start];
+  start.state   = 'current';
+  draw();
+
+  let found = false;
+
+  while (queue.length) {
+    const cur = queue.shift();
+    cur.state = 'visited';
+    steps++;
+    log(`Visit ${cur.id}`, 'info');
+    draw();
+    await sleep(delay());
+
+    if (cur.id === goal.id) { found = true; break; }
+
+    for (const { node: nb, edge } of getNeighbors(cur)) {
+      if (!visited.has(nb.id)) {
+        visited.add(nb.id);
+        parent.set(nb.id, cur);
+        edge.state = 'visited';
+        nb.state   = 'current';
+        queue.push(nb);
+      }
+    }
+    draw();
+    await sleep(delay() / 2);
+  }
+
+  /* ── reconstruct & highlight path ── */
+  if (!found) {
+    log(`⚠ No path from ${start.id} to ${goal.id}`, 'warn');
+    return;
+  }
+  tracePath(parent, start, goal);
+}
+
+/* ════════════════════════════════════════
+   DFS  (with goal path reconstruction)
+════════════════════════════════════════ */
+async function dfsRun(start, goal) {
+  const visited = new Set();
+  const parent  = new Map([[start.id, null]]);
+
+  async function dfs(n) {
+    visited.add(n.id);
+    n.state = 'current';
+    steps++;
+    log(`Visit ${n.id}`, 'info');
+    draw();
+    await sleep(delay());
+    n.state = 'visited';
+
+    if (n.id === goal.id) return true;   /* signal found up the call stack */
+
+    for (const { node: nb, edge } of getNeighbors(n)) {
+      if (!visited.has(nb.id)) {
+        parent.set(nb.id, n);
+        edge.state = 'visited';
+        if (await dfs(nb)) return true;
+      }
+    }
+    draw();
+    return false;
+  }
+
+  const found = await dfs(start);
+
+  if (!found) {
+    log(`⚠ No path from ${start.id} to ${goal.id}`, 'warn');
+    return;
+  }
+  tracePath(parent, start, goal);
+}
+
+/* ════════════════════════════════════════
+   PATH TRACER  (shared by BFS & DFS)
+════════════════════════════════════════ */
+function tracePath(parent, start, goal) {
+  /* walk parent map from goal back to start */
+  const pathIds = [];
+  let cur = goal.id;
+  while (cur !== null) {
+    pathIds.unshift(cur);
+    cur = parent.has(cur) ? (parent.get(cur) ? parent.get(cur).id : null) : null;
+  }
+
+  /* colour path nodes */
+  pathIds.forEach(id => {
+    const n = nodes.find(n => n.id === id);
+    if (n) n.state = 'path';
+  });
+
+  /* colour path edges */
+  for (let i = 0; i < pathIds.length - 1; i++) {
+    const a = pathIds[i], b = pathIds[i + 1];
+    const e = edges.find(e =>
+      (e.a === a && e.b === b) || (e.a === b && e.b === a)
+    );
+    if (e) e.state = 'path';
+  }
+
+  draw();
+
+  /* log */
+  log('', 'info');
+  log('━━━━━━━━━━━━━━━━━━━━━━━━', 'ok');
+  log('Path found!', 'ok');
+  log(`  ${pathIds.join(' → ')}`, 'ok');
+  log(`  Length: ${pathIds.length - 1} edge(s)`, 'ok');
+  log('━━━━━━━━━━━━━━━━━━━━━━━━', 'ok');
+}
+
+/* ════════════════════════════════════════
+   DIJKSTRA  (all-nodes shortest distance)
+════════════════════════════════════════ */
+async function dijkstra(start) {
+  /* initialise distances — start = 0, all others = ∞ */
+  nodes.forEach(n => {
+    n.dist = (n.id === start.id) ? 0 : Infinity;
+  });
+
+  const unvisited = new Set(nodes.map(n => n.id));
+  start.state = 'current';
+  draw();
+
+  while (unvisited.size) {
+    /* pick unvisited node with smallest tentative distance */
+    const cur = nodes
+      .filter(n => unvisited.has(n.id))
+      .reduce((a, b) => a.dist < b.dist ? a : b);
+
+    /* all remaining nodes are unreachable */
+    if (cur.dist === Infinity) break;
+
+    unvisited.delete(cur.id);
+    cur.state = 'visited';
+    steps++;
+    log(`Node ${cur.id} finalized with distance ${cur.dist}`, 'info');
+    draw();
+    await sleep(delay());
+
+    /* relax neighbours */
+    for (const { node: nb, edge } of getNeighbors(cur)) {
+      if (!unvisited.has(nb.id)) continue;
+      const nd = cur.dist + edge.w;
+      if (nd < nb.dist) {
+        nb.dist    = nd;
+        edge.state = 'visited';
+        nb.state   = 'current';
+        log(`  Updated node ${nb.id} → new distance = ${nd} via node ${cur.id}`, 'ok');
+      }
+    }
+    draw();
+    await sleep(delay() / 2);
+  }
+
+  /* ── Final summary ── */
+  log('', 'info');
+  log('━━━━━━━━━━━━━━━━━━━━━━━━', 'ok');
+  log(`Distances from node ${start.id}:`, 'ok');
+  nodes
+    .slice()
+    .sort((a, b) => a.id - b.id)
+    .forEach(n => {
+      const dist = n.dist === Infinity ? '∞ (unreachable)' : n.dist;
+      log(`  Node ${n.id}  →  d = ${dist}`, n.dist === Infinity ? 'warn' : 'info');
+    });
+  log('━━━━━━━━━━━━━━━━━━━━━━━━', 'ok');
+}
+
+/* ════════════════════════════════════════
+   CONTROLS
+════════════════════════════════════════ */
+function clearGraph() {
+  if (animRunning) return;
+  nodes = []; edges = [];
+  clearLog();
+  steps = 0;
+  updateStats();
+  draw();
+  setMode('node');
+}
+
+function loadSample() {
+  if (animRunning) return;
+  clearGraph();
+  nodes = [
+    { id:0, x:100, y:240, state:'default' },
+    { id:1, x:250, y:110, state:'default' },
+    { id:2, x:400, y: 70, state:'default' },
+    { id:3, x:550, y:160, state:'default' },
+    { id:4, x:600, y:340, state:'default' },
+    { id:5, x:400, y:410, state:'default' },
+    { id:6, x:220, y:370, state:'default' },
+  ];
+  edges = [
+    { a:0, b:1, w: 4, state:'default' },
+    { a:0, b:6, w: 8, state:'default' },
+    { a:1, b:2, w: 8, state:'default' },
+    { a:1, b:6, w:11, state:'default' },
+    { a:2, b:3, w: 7, state:'default' },
+    { a:2, b:5, w: 2, state:'default' },
+    { a:3, b:4, w: 9, state:'default' },
+    { a:3, b:5, w:14, state:'default' },
+    { a:4, b:5, w:10, state:'default' },
+    { a:5, b:6, w: 6, state:'default' },
+  ];
+  document.getElementById('startNode').value = 0;
+  document.getElementById('goalNode').value  = 4;
+  updateStats();
+  draw();
+  log('Sample graph loaded — Start=0  Goal=4', 'ok');
+}
+
+function goHome(e) {
+  e.preventDefault();
+  const t = document.getElementById('pg-transition');
+  t.classList.add('active');
+  setTimeout(() => { window.location.href = 'index.html'; }, 350);
+}
+
+/* ── Boot ── */
+setMode('node');
+draw();
+</script>
+</body>
+</html>

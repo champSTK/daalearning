@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAA Lab — Interactive Algorithm Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root{
+  --bg:       #050811;
+  --bg2:      #07101f;
+  --sidebar:  #080f1e;
+  --card:     #0d1528;
+  --card2:    #0a1220;
+  --border:   rgba(99,179,255,0.10);
+  --border2:  rgba(99,179,255,0.18);
+  --accent:   #3b82f6;
+  --accent2:  #8b5cf6;
+  --accent3:  #06d6a0;
+  --accent4:  #f59e0b;
+  --accent5:  #ef4444;
+  --accent6:  #ec4899;
+  --text:     #e2e8f0;
+  --text2:    #cbd5e1;
+  --muted:    #64748b;
+  --muted2:   #475569;
+}
+
+/* ══════════════════════════════════════════
+   RESET + BASE
+══════════════════════════════════════════ */
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Syne',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+  min-height:100vh;
+  display:flex;
+}
+
+/* ── global noise layer ── */
+body::before{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-size:200px;
+}
+
+/* ── grid overlay ── */
+body::after{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+
+/* ══════════════════════════════════════════
+   PAGE TRANSITION
+══════════════════════════════════════════ */
+.page-transition{
+  position:fixed; inset:0; background:var(--bg); z-index:9999;
+  pointer-events:none; opacity:0; transition:opacity 0.35s ease;
+}
+.page-transition.active{ opacity:1; pointer-events:all; }
+
+/* ══════════════════════════════════════════
+   SCROLLBAR STYLING
+══════════════════════════════════════════ */
+::-webkit-scrollbar{ width:5px; height:5px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:rgba(59,130,246,0.3); border-radius:99px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(59,130,246,0.55); }
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+.sidebar{
+  position:fixed; top:0; left:0; bottom:0;
+  width:240px; z-index:200;
+  background:var(--sidebar);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  padding:0 0 24px 0;
+  transition:transform 0.3s ease;
+}
+
+/* logo area */
+.sidebar-logo{
+  padding:28px 24px 24px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px;
+  text-decoration:none;
+}
+.logo-mark{
+  width:36px; height:36px; border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Mono',monospace; font-size:0.75rem; font-weight:700; color:#fff;
+  flex-shrink:0; box-shadow:0 0 18px rgba(59,130,246,0.35);
+}
+.logo-text{
+  font-family:'Space Mono',monospace; font-size:0.95rem; font-weight:700;
+  color:var(--accent); letter-spacing:2px;
+}
+.logo-sub{ font-size:0.62rem; color:var(--muted); letter-spacing:1px; margin-top:1px; }
+
+/* section label */
+.nav-label{
+  font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:3px;
+  text-transform:uppercase; color:var(--muted2); padding:20px 24px 8px;
+}
+
+/* nav items */
+.nav-item{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 20px; margin:2px 10px; border-radius:10px;
+  color:var(--muted); font-size:0.88rem; font-weight:600;
+  cursor:pointer; text-decoration:none; transition:all 0.2s;
+  position:relative; overflow:hidden;
+}
+.nav-item::before{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,rgba(59,130,246,0.08),transparent);
+  opacity:0; transition:opacity 0.2s;
+}
+.nav-item:hover{ color:var(--text2); background:rgba(255,255,255,0.04); }
+.nav-item:hover::before{ opacity:1; }
+.nav-item.active{
+  color:var(--accent); background:rgba(59,130,246,0.1);
+  border:1px solid rgba(59,130,246,0.2);
+}
+.nav-item.active::before{ opacity:1; }
+.nav-item.active .nav-icon{ color:var(--accent); }
+.nav-active-bar{
+  position:absolute; left:0; top:50%; transform:translateY(-50%);
+  width:3px; height:60%; background:var(--accent);
+  border-radius:0 3px 3px 0; opacity:0; transition:opacity 0.2s;
+}
+.nav-item.active .nav-active-bar{ opacity:1; }
+.nav-icon{ font-size:1rem; flex-shrink:0; transition:transform 0.2s; }
+.nav-item:hover .nav-icon{ transform:scale(1.15); }
+
+/* sidebar footer */
+.sidebar-footer{
+  margin-top:auto; padding:16px 24px 0;
+  border-top:1px solid var(--border);
+}
+.sidebar-stat-row{ display:flex; gap:12px; }
+.sidebar-stat{
+  flex:1; background:rgba(59,130,246,0.07); border:1px solid var(--border);
+  border-radius:8px; padding:10px; text-align:center;
+}
+.sidebar-stat .sv{ font-family:'Space Mono',monospace; font-size:1rem; font-weight:700; color:var(--accent); }
+.sidebar-stat .sl{ font-size:0.58rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+
+/* ══════════════════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════════════════ */
+.main-wrap{
+  margin-left:240px; flex:1; min-height:100vh;
+  display:flex; flex-direction:column;
+  position:relative; z-index:1;
+}
+
+/* ── topbar ── */
+.topbar{
+  position:sticky; top:0; z-index:100;
+  background:rgba(5,8,17,0.85); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:16px 40px; display:flex; align-items:center; justify-content:space-between;
+}
+.topbar-title{ font-size:0.95rem; font-weight:700; color:var(--text2); }
+.topbar-right{ display:flex; align-items:center; gap:14px; }
+.topbar-badge{
+  display:flex; align-items:center; gap:6px;
+  background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.22);
+  border-radius:100px; padding:5px 14px;
+  font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--accent); letter-spacing:2px;
+}
+.topbar-badge::before{
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--accent3); animation:pulse 2s infinite;
+}
+@keyframes pulse{ 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.5)} }
+
+/* ── content ── */
+.content{
+  padding:36px 40px 60px;
+  display:flex; flex-direction:column; gap:48px;
+  max-width:1100px;
+}
+
+/* ══════════════════════════════════════════
+   SECTION HEADERS
+══════════════════════════════════════════ */
+.sec-header{ margin-bottom:24px; }
+.sec-tag{
+  font-family:'Space Mono',monospace; font-size:0.65rem;
+  letter-spacing:4px; text-transform:uppercase; color:var(--accent);
+  margin-bottom:8px;
+}
+.sec-title{ font-size:1.5rem; font-weight:800; letter-spacing:-0.5px; line-height:1.2; }
+.sec-sub{ font-size:0.87rem; color:var(--muted); margin-top:6px; line-height:1.6; font-weight:400; }
+
+/* ══════════════════════════════════════════
+   HERO STRIP
+══════════════════════════════════════════ */
+.hero-strip{
+  position:relative; overflow:hidden;
+  background:linear-gradient(135deg,rgba(59,130,246,0.1) 0%,rgba(139,92,246,0.08) 50%,rgba(6,214,160,0.06) 100%);
+  border:1px solid var(--border2); border-radius:20px;
+  padding:40px 48px; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+}
+.hero-strip::before{
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:300px; height:300px; border-radius:50%;
+  background:radial-gradient(circle,rgba(59,130,246,0.12),transparent 70%);
+  pointer-events:none;
+}
+.hero-strip::after{
+  content:''; position:absolute; bottom:-40px; left:20%;
+  width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(circle,rgba(139,92,246,0.1),transparent 70%);
+  pointer-events:none;
+}
+.hero-text{ position:relative; z-index:1; }
+.hero-eyebrow{
+  font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:3px;
+  text-transform:uppercase; color:var(--accent); margin-bottom:12px;
+}
+.hero-h1{
+  font-size:clamp(1.8rem,3.5vw,2.6rem); font-weight:800;
+  line-height:1.1; letter-spacing:-1px; margin-bottom:14px;
+}
+.hero-h1 .g{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.hero-p{ font-size:0.92rem; color:var(--muted); max-width:440px; line-height:1.7; font-weight:400; }
+.hero-actions{ display:flex; gap:12px; margin-top:24px; flex-wrap:wrap; }
+.hero-btn{
+  padding:11px 26px; border-radius:9px; font-family:'Syne',sans-serif;
+  font-size:0.85rem; font-weight:700; cursor:pointer; text-decoration:none;
+  transition:all 0.2s; border:none;
+}
+.hero-btn.primary{
+  background:var(--accent); color:#fff;
+  box-shadow:0 0 24px rgba(59,130,246,0.3);
+}
+.hero-btn.primary:hover{ transform:translateY(-2px); box-shadow:0 0 36px rgba(59,130,246,0.5); }
+.hero-btn.ghost{
+  background:transparent; color:var(--text2);
+  border:1px solid var(--border2);
+}
+.hero-btn.ghost:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
+
+.hero-stats{ display:flex; gap:36px; position:relative; z-index:1; flex-shrink:0; }
+.hs{ text-align:center; }
+.hs-n{ font-family:'Space Mono',monospace; font-size:2rem; font-weight:700; color:var(--accent); line-height:1; }
+.hs-l{ font-size:0.65rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+
+/* ══════════════════════════════════════════
+   PROJECTS — HORIZONTAL SCROLL
+══════════════════════════════════════════ */
+.projects-scroll-wrap{ position:relative; }
+.projects-scroll{
+  display:flex; gap:18px;
+  overflow-x:auto; padding:4px 2px 14px;
+  scroll-behavior:smooth; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+}
+.projects-scroll::-webkit-scrollbar{ height:4px; }
+.projects-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,0.03); border-radius:99px; }
+.projects-scroll::-webkit-scrollbar-thumb{ background:rgba(59,130,246,0.25); border-radius:99px; }
+
+/* scroll arrows */
+.scroll-arrow{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:34px; height:34px; border-radius:50%;
+  background:rgba(13,21,40,0.9); border:1px solid var(--border2);
+  color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:0.85rem; transition:all 0.2s; z-index:10; backdrop-filter:blur(10px);
+}
+.scroll-arrow:hover{ background:rgba(59,130,246,0.2); border-color:rgba(59,130,246,0.4); color:var(--accent); }
+.scroll-arrow.left{ left:-14px; }
+.scroll-arrow.right{ right:-14px; }
+
+/* project cards */
+.proj-card{
+  flex-shrink:0; width:280px; scroll-snap-align:start;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:24px; position:relative; overflow:hidden;
+  transition:all 0.3s; cursor:pointer; text-decoration:none; color:var(--text);
+  display:flex; flex-direction:column;
+}
+.proj-card::before{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,var(--pca,rgba(59,130,246,0.07)),transparent 60%);
+  transition:opacity 0.3s;
+}
+.proj-card:hover{
+  transform:translateY(-6px) scale(1.01);
+  border-color:rgba(99,179,255,0.28);
+  box-shadow:0 16px 48px rgba(0,0,0,0.35), 0 0 32px var(--pcg,rgba(59,130,246,0.1));
+}
+.proj-num{
+  position:absolute; top:16px; right:18px;
+  font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); letter-spacing:2px;
+}
+.proj-icon{
+  width:48px; height:48px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; margin-bottom:18px; flex-shrink:0;
+}
+.proj-title{ font-size:1rem; font-weight:700; margin-bottom:8px; }
+.proj-desc{ font-size:0.8rem; color:var(--muted); line-height:1.65; font-weight:400; margin-bottom:16px; flex:1; }
+.proj-tags{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.ptag{
+  font-family:'Space Mono',monospace; font-size:0.6rem;
+  padding:3px 8px; border-radius:100px; letter-spacing:1px;
+}
+.proj-cta{
+  display:flex; align-items:center; gap:6px;
+  font-size:0.8rem; font-weight:700; margin-top:auto; transition:gap 0.2s;
+}
+.proj-card:hover .proj-cta{ gap:10px; }
+
+/* per-card colour tokens */
+.pc1{ --pca:rgba(59,130,246,0.08); --pcg:rgba(59,130,246,0.14); }
+.pc2{ --pca:rgba(139,92,246,0.08); --pcg:rgba(139,92,246,0.14); }
+.pc3{ --pca:rgba(6,214,160,0.08);  --pcg:rgba(6,214,160,0.14);  }
+.pc4{ --pca:rgba(245,158,11,0.08); --pcg:rgba(245,158,11,0.14); }
+.pc5{ --pca:rgba(239,68,68,0.08);  --pcg:rgba(239,68,68,0.14);  }
+.pc6{ --pca:rgba(16,185,129,0.08); --pcg:rgba(16,185,129,0.14); }
+.pc7{ --pca:rgba(236,72,153,0.08); --pcg:rgba(236,72,153,0.14); }
+.pc8{ --pca:rgba(99,102,241,0.08); --pcg:rgba(99,102,241,0.14); }
+
+.pc1 .proj-icon{ background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.28); }
+.pc2 .proj-icon{ background:rgba(139,92,246,0.14); border:1px solid rgba(139,92,246,0.28); }
+.pc3 .proj-icon{ background:rgba(6,214,160,0.14);  border:1px solid rgba(6,214,160,0.28);  }
+.pc4 .proj-icon{ background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.28); }
+.pc5 .proj-icon{ background:rgba(239,68,68,0.14);  border:1px solid rgba(239,68,68,0.28);  }
+.pc6 .proj-icon{ background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.28); }
+.pc7 .proj-icon{ background:rgba(236,72,153,0.14); border:1px solid rgba(236,72,153,0.28); }
+.pc8 .proj-icon{ background:rgba(99,102,241,0.14); border:1px solid rgba(99,102,241,0.28); }
+
+.pc1 .ptag{ background:rgba(59,130,246,0.1); color:#93c5fd; border:1px solid rgba(59,130,246,0.2); }
+.pc2 .ptag{ background:rgba(139,92,246,0.1); color:#c4b5fd; border:1px solid rgba(139,92,246,0.2); }
+.pc3 .ptag{ background:rgba(6,214,160,0.1);  color:#6ee7c8; border:1px solid rgba(6,214,160,0.2);  }
+.pc4 .ptag{ background:rgba(245,158,11,0.1); color:#fcd34d; border:1px solid rgba(245,158,11,0.2); }
+.pc5 .ptag{ background:rgba(239,68,68,0.1);  color:#fca5a5; border:1px solid rgba(239,68,68,0.2);  }
+.pc6 .ptag{ background:rgba(16,185,129,0.1); color:#6ee7b7; border:1px solid rgba(16,185,129,0.2); }
+.pc7 .ptag{ background:rgba(236,72,153,0.1); color:#f9a8d4; border:1px solid rgba(236,72,153,0.2); }
+.pc8 .ptag{ background:rgba(99,102,241,0.1); color:#a5b4fc; border:1px solid rgba(99,102,241,0.2); }
+
+.pc1 .proj-cta{ color:#3b82f6; } .pc2 .proj-cta{ color:#a78bfa; } .pc3 .proj-cta{ color:#06d6a0; }
+.pc4 .proj-cta{ color:#fbbf24; } .pc5 .proj-cta{ color:#f87171; } .pc6 .proj-cta{ color:#34d399; }
+.pc7 .proj-cta{ color:#f472b6; } .pc8 .proj-cta{ color:#818cf8; }
+
+/* ══════════════════════════════════════════
+   CONCEPTS  —  3-col masonry grid
+══════════════════════════════════════════ */
+.concepts-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px;
+}
+.concept-card{
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:14px; padding:22px 22px 20px;
+  transition:all 0.25s; position:relative; overflow:hidden;
+}
+.concept-card::after{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,var(--cc,rgba(59,130,246,0.05)),transparent 55%);
+  pointer-events:none;
+}
+.concept-card:hover{ border-color:var(--border2); transform:translateY(-4px); box-shadow:0 12px 36px rgba(0,0,0,0.3); }
+.cc-icon{ font-size:1.7rem; margin-bottom:14px; }
+.cc-title{ font-size:0.95rem; font-weight:700; margin-bottom:7px; }
+.cc-desc{ font-size:0.78rem; color:var(--muted); line-height:1.65; font-weight:400; }
+.cc-badge{
+  display:inline-flex; margin-top:12px;
+  font-family:'Space Mono',monospace; font-size:0.6rem;
+  padding:3px 9px; border-radius:100px; letter-spacing:1px;
+  background:rgba(59,130,246,0.1); color:#93c5fd; border:1px solid rgba(59,130,246,0.2);
+}
+
+/* concept colour variants */
+.cc-blue{ --cc:rgba(59,130,246,0.07); }  .cc-blue .cc-badge{ background:rgba(59,130,246,0.1); color:#93c5fd; border-color:rgba(59,130,246,0.2); }
+.cc-purple{ --cc:rgba(139,92,246,0.07); } .cc-purple .cc-badge{ background:rgba(139,92,246,0.1); color:#c4b5fd; border-color:rgba(139,92,246,0.2); }
+.cc-green{ --cc:rgba(6,214,160,0.07); }   .cc-green .cc-badge{ background:rgba(6,214,160,0.1); color:#6ee7c8; border-color:rgba(6,214,160,0.2); }
+.cc-amber{ --cc:rgba(245,158,11,0.07); }  .cc-amber .cc-badge{ background:rgba(245,158,11,0.1); color:#fcd34d; border-color:rgba(245,158,11,0.2); }
+.cc-teal{ --cc:rgba(16,185,129,0.07); }   .cc-teal .cc-badge{ background:rgba(16,185,129,0.1); color:#6ee7b7; border-color:rgba(16,185,129,0.2); }
+.cc-red{ --cc:rgba(239,68,68,0.07); }     .cc-red .cc-badge{ background:rgba(239,68,68,0.1); color:#fca5a5; border-color:rgba(239,68,68,0.2); }
+.cc-pink{ --cc:rgba(236,72,153,0.07); }   .cc-pink .cc-badge{ background:rgba(236,72,153,0.1); color:#f9a8d4; border-color:rgba(236,72,153,0.2); }
+.cc-indigo{ --cc:rgba(99,102,241,0.07); } .cc-indigo .cc-badge{ background:rgba(99,102,241,0.1); color:#a5b4fc; border-color:rgba(99,102,241,0.2); }
+
+/* ══════════════════════════════════════════
+   LEARNING FLOW TIMELINE
+══════════════════════════════════════════ */
+.flow-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+@media(max-width:860px){ .flow-grid{ grid-template-columns:1fr; } }
+
+.flow-card{
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:14px; padding:24px; position:relative;
+  transition:all 0.25s; overflow:hidden;
+}
+.flow-card:hover{ border-color:var(--border2); transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.3); }
+.flow-step{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:40px; height:40px; border-radius:50%;
+  font-family:'Space Mono',monospace; font-size:0.85rem; font-weight:700;
+  margin-bottom:16px;
+}
+.fs1{ background:rgba(59,130,246,0.15); border:2px solid #3b82f6; color:#3b82f6; }
+.fs2{ background:rgba(139,92,246,0.15); border:2px solid #8b5cf6; color:#8b5cf6; }
+.fs3{ background:rgba(6,214,160,0.15);  border:2px solid #06d6a0; color:#06d6a0; }
+.flow-title{ font-size:1rem; font-weight:700; margin-bottom:8px; }
+.flow-desc{ font-size:0.8rem; color:var(--muted); line-height:1.65; font-weight:400; }
+
+/* connector line between flow cards (desktop only) */
+.flow-grid::before{
+  display:none; /* handled visually via borders */
+}
+
+/* ══════════════════════════════════════════
+   UPCOMING  (roadmap)
+══════════════════════════════════════════ */
+.roadmap-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+
+.roadmap-card{
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:12px; padding:18px 18px 16px;
+  display:flex; flex-direction:column; gap:8px;
+  transition:all 0.22s;
+}
+.roadmap-card:hover{ border-color:var(--border2); transform:translateY(-3px); }
+.rm-top{ display:flex; align-items:center; justify-content:space-between; }
+.rm-icon{ font-size:1.3rem; }
+.rm-badge{
+  font-family:'Space Mono',monospace; font-size:0.58rem; padding:3px 9px;
+  border-radius:100px; letter-spacing:1px; font-weight:700;
+}
+.badge-planned{ background:rgba(99,102,241,0.12); color:#a5b4fc; border:1px solid rgba(99,102,241,0.25); }
+.badge-progress{ background:rgba(245,158,11,0.12); color:#fcd34d; border:1px solid rgba(245,158,11,0.25); }
+.badge-done{ background:rgba(16,185,129,0.12); color:#6ee7b7; border:1px solid rgba(16,185,129,0.25); }
+.rm-title{ font-size:0.88rem; font-weight:700; }
+.rm-desc{ font-size:0.75rem; color:var(--muted); line-height:1.6; font-weight:400; }
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+.dash-footer{
+  margin-top:auto; padding:24px 40px;
+  border-top:1px solid var(--border);
+  font-family:'Space Mono',monospace; font-size:0.72rem;
+  color:var(--muted2); letter-spacing:1px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+}
+
+/* ══════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════ */
+@keyframes fadeUp{ from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+
+.fade-up{ animation:fadeUp 0.55s ease both; }
+.fade-up-1{ animation-delay:0.05s; }
+.fade-up-2{ animation-delay:0.12s; }
+.fade-up-3{ animation-delay:0.19s; }
+.fade-up-4{ animation-delay:0.26s; }
+
+/* ══════════════════════════════════════════
+   MOBILE SIDEBAR TOGGLE
+══════════════════════════════════════════ */
+.sidebar-toggle{
+  display:none; position:fixed; top:14px; left:14px; z-index:300;
+  width:38px; height:38px; border-radius:9px;
+  background:rgba(13,21,40,0.9); border:1px solid var(--border2);
+  color:var(--text2); cursor:pointer; font-size:1rem;
+  align-items:center; justify-content:center; backdrop-filter:blur(12px);
+}
+.sidebar-overlay{
+  display:none; position:fixed; inset:0; z-index:190;
+  background:rgba(0,0,0,0.5); backdrop-filter:blur(3px);
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media(max-width:900px){
+  .sidebar{ transform:translateX(-100%); }
+  .sidebar.open{ transform:translateX(0); }
+  .main-wrap{ margin-left:0; }
+  .sidebar-toggle{ display:flex; }
+  .sidebar-overlay.show{ display:block; }
+  .content{ padding:28px 20px 48px; }
+  .topbar{ padding:14px 20px; padding-left:64px; }
+  .hero-strip{ padding:28px 24px; }
+  .hero-stats{ gap:20px; }
+  .hs-n{ font-size:1.5rem; }
+  .flow-grid{ grid-template-columns:1fr; }
+}
+@media(max-width:600px){
+  .hero-h1{ font-size:1.6rem; }
+  .concepts-grid{ grid-template-columns:1fr 1fr; }
+  .roadmap-grid{ grid-template-columns:1fr 1fr; }
+}
+@media(max-width:420px){
+  .concepts-grid{ grid-template-columns:1fr; }
+  .roadmap-grid{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── PAGE TRANSITION ── -->
+<div class="page-transition" id="transition"></div>
+
+<!-- ════════════════════════
+     SIDEBAR
+════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+
+  <a class="sidebar-logo" href="#">
+    <div class="logo-mark">DA</div>
+    <div>
+      <div class="logo-text">DAA_LAB</div>
+      <div class="logo-sub">Algorithm Learning</div>
+    </div>
+  </a>
+
+  <div class="nav-label">Navigation</div>
+
+  <a class="nav-item active" href="#top" onclick="setActive(this);closeSidebar()">
+    <div class="nav-active-bar"></div>
+    <span class="nav-icon">⊞</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="nav-item" href="#projects" onclick="setActive(this);closeSidebar()">
+    <div class="nav-active-bar"></div>
+    <span class="nav-icon">🗂</span>
+    <span>Projects</span>
+  </a>
+  <a class="nav-item" href="#concepts" onclick="setActive(this);closeSidebar()">
+    <div class="nav-active-bar"></div>
+    <span class="nav-icon">📚</span>
+    <span>Concepts</span>
+  </a>
+  <a class="nav-item" href="#flow" onclick="setActive(this);closeSidebar()">
+    <div class="nav-active-bar"></div>
+    <span class="nav-icon">▶</span>
+    <span>Learning Flow</span>
+  </a>
+  <a class="nav-item" href="#upcoming" onclick="setActive(this);closeSidebar()">
+    <div class="nav-active-bar"></div>
+    <span class="nav-icon">🗺</span>
+    <span>Upcoming</span>
+  </a>
+
+  <div class="nav-label" style="margin-top:8px">Projects</div>
+
+  <a class="nav-item" href="project1.html" onclick="navigate(event,'project1.html')">
+    <span class="nav-icon">⚡</span><span>Sorting Race</span>
+  </a>
+  <a class="nav-item" href="project2.html" onclick="navigate(event,'project2.html')">
+    <span class="nav-icon">♟</span><span>N-Queens</span>
+  </a>
+  <a class="nav-item" href="project3.html" onclick="navigate(event,'project3.html')">
+    <span class="nav-icon">🗺</span><span>Pathfinding</span>
+  </a>
+  <a class="nav-item" href="project4.html" onclick="navigate(event,'project4.html')">
+    <span class="nav-icon">🕸</span><span>Graph Algorithms</span>
+  </a>
+  <a class="nav-item" href="project8.html" onclick="navigate(event,'project8.html')">
+    <span class="nav-icon">🌳</span><span>Huffman Coding</span>
+  </a>
+
+
+  <div class="sidebar-footer">
+    <div class="sidebar-stat-row">
+      <div class="sidebar-stat"><div class="sv">5</div><div class="sl">Projects</div></div>
+      <div class="sidebar-stat"><div class="sv">10+</div><div class="sl">Algos</div></div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ── MOBILE OVERLAY ── -->
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ── MOBILE TOGGLE ── -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">☰</button>
+
+<!-- ════════════════════════
+     MAIN WRAP
+════════════════════════ -->
+<div class="main-wrap" id="top">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="topbar-title">Design &amp; Analysis of Algorithms</div>
+    <div class="topbar-right">
+      <div class="topbar-badge">LIVE LAB</div>
+    </div>
+  </div>
+
+  <!-- ── content ── -->
+  <div class="content">
+
+    <!-- ══════════ HERO STRIP ══════════ -->
+    <div class="hero-strip fade-up">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Interactive Algorithm Laboratory</div>
+        <h1 class="hero-h1">Learn <span class="g">DAA</span><br>Interactively</h1>
+        <p class="hero-p">Visualize algorithms, compare performance, and master problem solving through real-time animated demos.</p>
+        <div class="hero-actions">
+          <a href="#projects" class="hero-btn primary">Start Learning</a>
+          <a href="#concepts" class="hero-btn ghost">Explore Concepts</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hs"><div class="hs-n">5</div><div class="hs-l">Projects</div></div>
+        <div class="hs"><div class="hs-n">10+</div><div class="hs-l">Algorithms</div></div>
+        <div class="hs"><div class="hs-n">∞</div><div class="hs-l">Experiments</div></div>
+      </div>
+    </div>
+
+    <!-- ══════════ PROJECTS ══════════ -->
+    <section id="projects">
+      <div class="sec-header fade-up fade-up-1">
+        <div class="sec-tag">// 01 — Interactive Projects</div>
+        <div class="sec-title">Visualizers &amp; Simulators</div>
+        <div class="sec-sub">Each card is a live, interactive demo. Click to explore.</div>
+      </div>
+
+      <div class="projects-scroll-wrap fade-up fade-up-2">
+        <button class="scroll-arrow left" onclick="scrollProjects(-300)" aria-label="Scroll left">‹</button>
+        <button class="scroll-arrow right" onclick="scrollProjects(300)" aria-label="Scroll right">›</button>
+
+        <div class="projects-scroll" id="projScroll">
+
+          <a href="project1.html" class="proj-card pc1" onclick="navigate(event,'project1.html')">
+            <div class="proj-num">01 /</div>
+            <div class="proj-icon">⚡</div>
+            <div class="proj-title">Sorting Efficiency Race</div>
+            <div class="proj-desc">Watch Bubble, Selection, Merge, and Quick Sort race in real-time. Compare O(n²) vs O(n log n) with live charts.</div>
+            <div class="proj-tags"><span class="ptag">O(n²)</span><span class="ptag">O(n log n)</span><span class="ptag">Comparison</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project2.html" class="proj-card pc2" onclick="navigate(event,'project2.html')">
+            <div class="proj-num">02 /</div>
+            <div class="proj-icon">♟</div>
+            <div class="proj-title">N-Queens Visualizer</div>
+            <div class="proj-desc">Watch backtracking place N queens on a chessboard. Track state-space exploration and backtrack depth live.</div>
+            <div class="proj-tags"><span class="ptag">Backtracking</span><span class="ptag">State Space</span><span class="ptag">Constraint</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project3.html" class="proj-card pc3" onclick="navigate(event,'project3.html')">
+            <div class="proj-num">03 /</div>
+            <div class="proj-icon">🗺</div>
+            <div class="proj-title">Pathfinding Race</div>
+            <div class="proj-desc">Draw walls and compare Dijkstra, A*, BFS, and Greedy Best-First. Analyze visited nodes vs path quality.</div>
+            <div class="proj-tags"><span class="ptag">Dijkstra</span><span class="ptag">A*</span><span class="ptag">BFS</span><span class="ptag">Greedy</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project4.html" class="proj-card pc4" onclick="navigate(event,'project4.html')">
+            <div class="proj-num">04 /</div>
+            <div class="proj-icon">🕸</div>
+            <div class="proj-title">Graph Algorithms</div>
+            <div class="proj-desc">Build custom graphs. Run BFS, DFS, and Dijkstra (all-nodes shortest distance) with step-by-step animation.</div>
+            <div class="proj-tags"><span class="ptag">BFS</span><span class="ptag">DFS</span><span class="ptag">Dijkstra</span><span class="ptag">Graph</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project8.html" class="proj-card pc8" onclick="navigate(event,'project8.html')">
+            <div class="proj-num">05 /</div>
+            <div class="proj-icon">🌳</div>
+            <div class="proj-title">Huffman Coding</div>
+            <div class="proj-desc">Enter characters and frequencies manually. Build the Huffman tree step by step and generate optimal prefix-free codes.</div>
+            <div class="proj-tags"><span class="ptag">Huffman</span><span class="ptag">Greedy</span><span class="ptag">Compression</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+        </div><!-- /projects-scroll -->
+      </div>
+    </section>
+
+    <!-- ══════════ CONCEPTS ══════════ -->
+    <section id="concepts">
+      <div class="sec-header fade-up">
+        <div class="sec-tag">// 02 — Core Concepts</div>
+        <div class="sec-title">DAA Topics</div>
+        <div class="sec-sub">The algorithmic paradigms powering every visualizer in this lab.</div>
+      </div>
+
+      <div class="concepts-grid fade-up fade-up-1">
+
+        <div class="concept-card cc-blue">
+          <div class="cc-icon">🔢</div>
+          <div class="cc-title">Sorting Algorithms</div>
+          <div class="cc-desc">From brute-force O(n²) approaches like Bubble and Selection Sort to efficient O(n log n) divide-and-conquer algorithms.</div>
+          <span class="cc-badge">O(n²) · O(n log n)</span>
+        </div>
+
+        <div class="concept-card cc-purple">
+          <div class="cc-icon">🔍</div>
+          <div class="cc-title">Pathfinding</div>
+          <div class="cc-desc">BFS guarantees unweighted shortest paths; Dijkstra handles weighted graphs; A* uses heuristics to search efficiently.</div>
+          <span class="cc-badge">BFS · Dijkstra · A*</span>
+        </div>
+
+        <div class="concept-card cc-green">
+          <div class="cc-icon">🌐</div>
+          <div class="cc-title">Graph Algorithms</div>
+          <div class="cc-desc">DFS, BFS traversals and shortest-path algorithms form the backbone of networking, AI, and systems design.</div>
+          <span class="cc-badge">DFS · BFS · MST</span>
+        </div>
+
+        <div class="concept-card cc-red">
+          <div class="cc-icon">↩</div>
+          <div class="cc-title">Backtracking</div>
+          <div class="cc-desc">Systematic trial-and-error via state-space tree exploration. Prunes invalid branches early — powers N-Queens and Maze.</div>
+          <span class="cc-badge">State Space Tree</span>
+        </div>
+
+        <div class="concept-card cc-amber">
+          <div class="cc-icon">📊</div>
+          <div class="cc-title">Dynamic Programming</div>
+          <div class="cc-desc">Overlapping subproblems solved once and memoized. Powers 0/1 Knapsack, LCS, and many optimisation problems.</div>
+          <span class="cc-badge">Memoization · DP Table</span>
+        </div>
+
+        <div class="concept-card cc-teal">
+          <div class="cc-icon">💡</div>
+          <div class="cc-title">Greedy Algorithms</div>
+          <div class="cc-desc">Make locally optimal choices at each step. Activity Selection, Huffman Coding, and Fractional Knapsack are classics.</div>
+          <span class="cc-badge">Local Optimal Choice</span>
+        </div>
+        <div class="concept-card cc-indigo">
+          <div class="cc-icon">🧩</div>
+          <div class="cc-title">Divide &amp; Conquer</div>
+          <div class="cc-desc">Break problems into subproblems, solve recursively, combine results. Powers Merge Sort, Quick Sort, Binary Search.</div>
+          <span class="cc-badge">Recursion · Combine</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════ LEARNING FLOW ══════════ -->
+    <section id="flow">
+      <div class="sec-header fade-up">
+        <div class="sec-tag">// 03 — Learning Flow</div>
+        <div class="sec-title">How to Use This Lab</div>
+        <div class="sec-sub">A structured path from theory to hands-on mastery.</div>
+      </div>
+
+      <div class="flow-grid fade-up fade-up-1">
+
+        <div class="flow-card">
+          <div class="flow-step fs1">01</div>
+          <div class="flow-title">Understand the Concept</div>
+          <div class="flow-desc">Read the algorithm description and complexity analysis in the Concepts section. Understand why an algorithm exists and its theoretical efficiency bounds before opening a visualizer.</div>
+        </div>
+
+        <div class="flow-card">
+          <div class="flow-step fs2">02</div>
+          <div class="flow-title">Visualize the Algorithm</div>
+          <div class="flow-desc">Open a project and watch the algorithm execute step-by-step. Use speed control to slow it down. Observe data structure changes, comparisons, and backtrack decisions live.</div>
+        </div>
+
+        <div class="flow-card">
+          <div class="flow-step fs3">03</div>
+          <div class="flow-title">Interact &amp; Experiment</div>
+          <div class="flow-desc">Tweak parameters — change array sizes, add obstacles, build custom graphs. Compare multiple algorithms side by side and form hypotheses you can test live.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════ UPCOMING ══════════ -->
+    <section id="upcoming">
+      <div class="sec-header fade-up">
+        <div class="sec-tag">// 04 — Roadmap</div>
+        <div class="sec-title">Upcoming Features</div>
+        <div class="sec-sub">What's next for the DAA Lab.</div>
+      </div>
+
+      <div class="roadmap-grid fade-up fade-up-1">
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">📈</span>
+            <span class="rm-badge badge-progress">In Progress</span>
+          </div>
+          <div class="rm-title">Performance Comparison</div>
+          <div class="rm-desc">Side-by-side runtime and memory charts across all sorting and pathfinding algorithms.</div>
+        </div>
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">🌲</span>
+            <span class="rm-badge badge-planned">Planned</span>
+          </div>
+          <div class="rm-title">MST Visualizer</div>
+          <div class="rm-desc">Kruskal and Prim algorithms side by side — watch minimum spanning trees grow edge by edge.</div>
+        </div>
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">🔢</span>
+            <span class="rm-badge badge-planned">Planned</span>
+          </div>
+          <div class="rm-title">LCS</div>
+          <div class="rm-desc">Animated DP table for Longest Common Subsequence.</div>
+        </div>
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">📱</span>
+            <span class="rm-badge badge-progress">In Progress</span>
+          </div>
+          <div class="rm-title">Mobile Optimisation</div>
+          <div class="rm-desc">Touch-friendly graph editors and responsive canvas layouts for all visualizers.</div>
+        </div>
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">🎓</span>
+            <span class="rm-badge badge-planned">Planned</span>
+          </div>
+          <div class="rm-title">Quiz Mode</div>
+          <div class="rm-desc">Interactive quizzes tied to each algorithm — predict the next step before it plays.</div>
+        </div>
+
+      </div>
+    </section>
+
+  </div><!-- /content -->
+
+  <footer class="dash-footer">
+    <span>DAA_LAB &nbsp;·&nbsp; Design &amp; Analysis of Algorithms &nbsp;·&nbsp; Interactive Learning Platform</span>
+    <span style="color:var(--muted)">5 Projects &nbsp;·&nbsp; 10+ Algorithms</span>
+  </footer>
+
+</div><!-- /main-wrap -->
+
+<script>
+/* ── PAGE TRANSITION ── */
+function navigate(e, url) {
+  e.preventDefault();
+  const t = document.getElementById('transition');
+  t.classList.add('active');
+  setTimeout(() => { window.location.href = url; }, 350);
+}
+
+/* ── SIDEBAR ACTIVE STATE ── */
+function setActive(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ── SIDEBAR MOBILE ── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ── PROJECTS HORIZONTAL SCROLL ── */
+function scrollProjects(px) {
+  const el = document.getElementById('projScroll');
+  el.scrollBy({ left: px, behavior: 'smooth' });
+}
+
+/* ── ACTIVE SECTION TRACKING via IntersectionObserver ── */
+const sections = ['top','projects','concepts','flow','upcoming'];
+const navItems = document.querySelectorAll('.nav-item');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navItems.forEach(n => {
+        const href = n.getAttribute('href');
+        if (href === '#' + id || (id === 'top' && href === '#top')) {
+          n.classList.add('active');
+        } else {
+          /* only clear the top-level section nav items */
+          if (['#top','#projects','#concepts','#flow','#upcoming'].includes(href)) {
+            n.classList.remove('active');
+          }
+        }
+      });
+    }
+  });
+}, { rootMargin:'-40% 0px -55% 0px' });
+
+/* observe the main-wrap for #top */
+observer.observe(document.getElementById('top'));
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+/* ── FADE-UP on scroll ── */
+const fadeEls = document.querySelectorAll('.fade-up');
+const fadeObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+      fadeObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.08 });
+
+fadeEls.forEach(el => {
+  el.style.animationPlayState = 'paused';
+  fadeObserver.observe(el);
+});
+</script>
+</body>
+</html>

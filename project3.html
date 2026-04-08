@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Lab: Pathfinding Efficiency</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ── BACK BUTTON ── */
+        .back-btn {
+            position: fixed;
+            top: 18px; left: 20px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: rgba(13,21,40,0.85);
+            border: 1px solid rgba(99,179,255,0.2);
+            border-radius: 8px;
+            color: #93c5fd;
+            font-family: 'Space Mono', 'Courier New', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(99,179,255,0.45); color: #bfdbfe; transform: translateX(-2px); }
+        .back-btn svg { transition: transform 0.2s; }
+        .back-btn:hover svg { transform: translateX(-3px); }
+
+        /* ── PAGE TRANSITION ── */
+        .page-transition { position: fixed; inset: 0; background: #050811; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+        .page-transition.active { opacity: 1; pointer-events: all; }
+
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; padding-top: 70px; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; background: #3498db; color: white; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #2980b9; transform: translateY(-1px); }
+        button.reset { background: #e74c3c; }
+        button.maze { background: #f39c12; }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; max-width: 900px; }
+        .algo-box { border: 1px solid #444; padding: 10px; background: #222; text-align: center; border-radius: 8px; position: relative; }
+        canvas.grid-canvas { background: #000; display: block; margin: 10px auto; cursor: crosshair; border-radius: 4px; }
+        .stats { font-size: 0.8em; margin-top: 5px; color: #aaa; font-family: monospace; }
+        
+        .error-overlay { color: #ff4757; font-weight: bold; font-size: 0.9em; margin-top: 5px; display: none; }
+        #global-error { background: #ff4757; color: white; padding: 10px 20px; border-radius: 5px; margin-bottom: 15px; display: none; font-weight: bold; animation: shake 0.5s; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .chart-container { width: 100%; max-width: 800px; background: #2c3e50; padding: 20px; margin-top: 30px; border-radius: 12px; border: 1px solid #34495e; display: none; }
+        h2 { color: #f1c40f; margin-top: 0; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="page-transition" id="pg-transition"></div>
+
+<a class="back-btn" href="index.html" onclick="goHome(event)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    BACK TO HOME
+</a>
+
+    <h1>Pathfinding Efficiency Race</h1>
+    <p>Using Random Obstacles to analyze Search Space vs. Path Quality.</p>
+
+    <div id="global-error">⚠️ No Path Found: Obstacles are blocking the destination!</div>
+
+    <div class="controls">
+        <button onclick="startRace()">▶ Start Race</button>
+        <button class="maze" onclick="generateRandomWalls()">🧱 Random Walls</button>
+        <button class="reset" onclick="resetGrid()">🗑️ Reset Grid</button>
+    </div>
+
+    <div class="grid-container">
+        <div class="algo-box">
+            <div>Dijkstra's</div>
+            <canvas id="canvas1" class="grid-canvas"></canvas>
+            <div id="stats1" class="stats">Visited: 0 | Path: 0</div>
+            <div id="error1" class="error-overlay">UNREACHABLE</div>
+        </div>
+        <div class="algo-box">
+            <div>A* (Heuristic)</div>
+            <canvas id="canvas2" class="grid-canvas"></canvas>
+            <div id="stats2" class="stats">Visited: 0 | Path: 0</div>
+            <div id="error2" class="error-overlay">UNREACHABLE</div>
+        </div>
+        <div class="algo-box">
+            <div>BFS</div>
+            <canvas id="canvas3" class="grid-canvas"></canvas>
+            <div id="stats3" class="stats">Visited: 0 | Path: 0</div>
+            <div id="error3" class="error-overlay">UNREACHABLE</div>
+        </div>
+        <div class="algo-box">
+            <div>Greedy Best-First</div>
+            <canvas id="canvas4" class="grid-canvas"></canvas>
+            <div id="stats4" class="stats">Visited: 0 | Path: 0</div>
+            <div id="error4" class="error-overlay">UNREACHABLE</div>
+        </div>
+    </div>
+
+    <div id="chartWrapper" class="chart-container">
+        <h2>Efficiency Analysis</h2>
+        <canvas id="efficiencyChart"></canvas>
+    </div>
+
+<script>
+    const ROWS = 25, COLS = 25, TILE_SIZE = 15;
+    const canvases = [1, 2, 3, 4].map(i => document.getElementById(`canvas${i}`));
+    const ctxs = canvases.map(c => c.getContext('2d'));
+    
+    let grid = Array(ROWS).fill().map(() => Array(COLS).fill(0)); 
+    let startNode = {r: 2, c: 2}, endNode = {r: 22, c: 22};
+    let isDrawing = false;
+    let results = { visited: [0, 0, 0, 0], paths: [0, 0, 0, 0] };
+    let finishedCount = 0;
+    let myChart = null;
+
+    canvases.forEach(c => { c.width = COLS * TILE_SIZE; c.height = ROWS * TILE_SIZE; });
+
+    function drawTile(ctx, r, c, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE - 1, TILE_SIZE - 1);
+    }
+
+    function renderAll() {
+        ctxs.forEach((ctx) => {
+            ctx.clearRect(0, 0, COLS * TILE_SIZE, ROWS * TILE_SIZE);
+            for(let r=0; r<ROWS; r++) {
+                for(let c=0; c<COLS; c++) {
+                    let color = "#1a1a1a";
+                    if (grid[r][c] === 1) color = "#7f8c8d";
+                    if (r === startNode.r && c === startNode.c) color = "#2ecc71";
+                    if (r === endNode.r && c === endNode.c) color = "#e74c3c";
+                    drawTile(ctx, r, c, color);
+                }
+            }
+        });
+    }
+
+    canvases[0].onmousedown = () => isDrawing = true;
+    window.onmouseup = () => isDrawing = false;
+    canvases[0].onmousemove = (e) => {
+        if(!isDrawing) return;
+        const rect = canvases[0].getBoundingClientRect();
+        const c = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+        const r = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+        if(grid[r] && grid[r][c] === 0 && !((r==startNode.r && c==startNode.c) || (r==endNode.r && c==endNode.c))) {
+            grid[r][c] = 1;
+            renderAll();
+        }
+    };
+
+    function resetGrid() {
+        grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        finishedCount = 0;
+        document.getElementById('chartWrapper').style.display = 'none';
+        document.getElementById('global-error').style.display = 'none';
+        document.querySelectorAll('.error-overlay').forEach(e => e.style.display = 'none');
+        renderAll();
+        document.querySelectorAll('.stats').forEach(s => s.innerText = "Visited: 0 | Path: 0");
+    }
+
+    function generateRandomWalls() {
+        resetGrid();
+        const density = 0.3;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (Math.random() < density) {
+                    if (!((r === startNode.r && c === startNode.c) || (r === endNode.r && c === endNode.c))) {
+                        grid[r][c] = 1;
+                    }
+                }
+            }
+        }
+        renderAll();
+    }
+
+    async function solve(idx, type) {
+        let openSet = [{r: startNode.r, c: startNode.c, dist: 0, priority: 0, parent: null}];
+        let visited = new Set();
+        let visitedCount = 0;
+        const ctx = ctxs[idx];
+
+        while(openSet.length > 0) {
+            if (type !== 'bfs') openSet.sort((a, b) => a.priority - b.priority);
+            let current = openSet.shift();
+            let key = `${current.r},${current.c}`;
+            if(visited.has(key)) continue;
+            visited.add(key);
+            visitedCount++;
+
+            if(current.r === endNode.r && current.c === endNode.c) {
+                finalize(idx, current, visitedCount);
+                return;
+            }
+
+            if(!(current.r === startNode.r && current.c === startNode.c)) {
+                drawTile(ctx, current.r, current.c, "rgba(52, 152, 219, 0.4)");
+            }
+
+            const neighbors = [[0,1],[0,-1],[1,0],[-1,0]];
+            for(let [dr, dc] of neighbors) {
+                let nr = current.r + dr, nc = current.c + dc;
+                if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS && grid[nr][nc] === 0 && !visited.has(`${nr},${nc}`)) {
+                    let d = current.dist + 1;
+                    let h = Math.abs(nr-endNode.r) + Math.abs(nc-endNode.c);
+                    let p = (type==='dijkstra')? d : (type==='astar')? d+h : h;
+                    openSet.push({r: nr, c: nc, dist: d, priority: p, parent: current});
+                }
+            }
+            if(visitedCount % 10 === 0) await new Promise(r => setTimeout(r, 1));
+        }
+        
+        finalize(idx, null, visitedCount);
+        document.getElementById(`error${idx+1}`).style.display = 'block';
+        document.getElementById('global-error').style.display = 'block';
+    }
+
+    function finalize(idx, node, vCount) {
+        let pLen = 0;
+        if (node) {
+            let curr = node;
+            while(curr) {
+                drawTile(ctxs[idx], curr.r, curr.c, "#f1c40f");
+                curr = curr.parent;
+                pLen++;
+            }
+        }
+        document.getElementById(`stats${idx+1}`).innerText = `Visited: ${vCount} | Path: ${pLen || 'No Path'}`;
+        results.visited[idx] = vCount;
+        results.paths[idx] = pLen;
+        finishedCount++;
+        if(finishedCount === 4) showChart();
+    }
+
+    function showChart() {
+        document.getElementById('chartWrapper').style.display = 'block';
+        const ctx = document.getElementById('efficiencyChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["Dijkstra", "A*", "BFS", "Greedy"],
+                datasets: [
+                    { label: 'Nodes Visited', data: results.visited, backgroundColor: '#3498db' },
+                    { label: 'Path Length (0 if blocked)', data: results.paths, backgroundColor: '#f1c40f' }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: '#444' }, ticks: { color: '#fff' } },
+                    x: { ticks: { color: '#fff' } }
+                },
+                plugins: { legend: { labels: { color: '#fff' } } }
+            }
+        });
+    }
+
+    function startRace() {
+        finishedCount = 0;
+        document.getElementById('global-error').style.display = 'none';
+        document.querySelectorAll('.error-overlay').forEach(e => e.style.display = 'none');
+        renderAll();
+        solve(0, 'dijkstra'); solve(1, 'astar'); solve(2, 'bfs'); solve(3, 'greedy');
+    }
+
+    function goHome(e) {
+        e.preventDefault();
+        const t = document.getElementById('pg-transition');
+        t.classList.add('active');
+        setTimeout(() => { window.location.href = 'index.html'; }, 350);
+    }
+
+    renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Lab: N-Queens Backtracking</title>
+    <style>
+        /* ── BACK BUTTON ── */
+        .back-btn {
+            position: fixed;
+            top: 18px; left: 20px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: rgba(13,21,40,0.85);
+            border: 1px solid rgba(99,179,255,0.2);
+            border-radius: 8px;
+            color: #93c5fd;
+            font-family: 'Space Mono', 'Courier New', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(99,179,255,0.45); color: #bfdbfe; transform: translateX(-2px); }
+        .back-btn svg { transition: transform 0.2s; }
+        .back-btn:hover svg { transform: translateX(-3px); }
+
+        /* ── PAGE TRANSITION ── */
+        .page-transition { position: fixed; inset: 0; background: #050811; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+        .page-transition.active { opacity: 1; pointer-events: all; }
+
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; padding-top: 70px; }
+        .controls { margin-bottom: 20px; background: #2c3e50; padding: 20px; border-radius: 10px; display: flex; gap: 20px; align-items: center; border: 1px solid #34495e; }
+        .board-container { position: relative; background: #34495e; padding: 10px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #chessboard { display: grid; border: 2px solid #2c3e50; }
+        .cell { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: 0.1s; }
+        .white { background: #ecf0f1; }
+        .black { background: #95a5a6; }
+        .queen { animation: pop 0.3s ease; }
+        
+        .stats-panel { margin-top: 20px; display: flex; gap: 30px; font-family: monospace; background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+        .stat-item { text-align: center; }
+        .stat-num { display: block; font-size: 1.5em; color: #f1c40f; }
+        
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; background: #27ae60; color: white; font-weight: bold; }
+        button:disabled { background: #7f8c8d; cursor: not-allowed; }
+        #instantBtn { background: #f1c40f; color: #1a1a1a; display: none; }
+        
+        input[type=number] { padding: 8px; width: 50px; border-radius: 4px; border: none; }
+        #status { margin-top: 10px; font-weight: bold; color: #2ecc71; height: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="page-transition" id="pg-transition"></div>
+
+<a class="back-btn" href="index.html" onclick="goHome(event)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    BACK TO HOME
+</a>
+
+    <h1>N-Queens Visualizer</h1>
+    <p>Visualizing the <strong>State-Space Tree</strong> and <strong>Backtracking</strong> depth.</p>
+
+    <div class="controls">
+        <div>
+            <label>Board Size (N): </label>
+            <input type="number" id="nInput" value="8" min="4" max="12">
+        </div>
+        <button id="startBtn" onclick="solve()">▶ Start Solving</button>
+        <button id="instantBtn" onclick="makeInstant()">⚡ Instant Result</button>
+        <button onclick="resetBoard()" style="background:#e74c3c">🗑️ Reset</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="board-container">
+        <div id="chessboard"></div>
+    </div>
+
+    <div class="stats-panel">
+        <div class="stat-item">
+            <span class="stat-num" id="attempts">0</span>
+            <label>Positions Tried</label>
+        </div>
+        <div class="stat-item">
+            <span class="stat-num" id="backtracks">0</span>
+            <label>Backtracks</label>
+        </div>
+    </div>
+
+<script>
+    let N = 8;
+    let board = [];
+    let attempts = 0;
+    let backtracks = 0;
+    let isRunning = false;
+    let skipAnimation = false;
+
+    function resetBoard() {
+        N = parseInt(document.getElementById('nInput').value);
+        const container = document.getElementById('chessboard');
+        container.style.gridTemplateColumns = `repeat(${N}, 50px)`;
+        container.innerHTML = '';
+        board = Array(N).fill().map(() => Array(N).fill(0));
+        attempts = 0;
+        backtracks = 0;
+        skipAnimation = false;
+        updateStats();
+        document.getElementById('status').innerText = "";
+        document.getElementById('instantBtn').style.display = "none";
+        document.getElementById('startBtn').disabled = false;
+        
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                const cell = document.createElement('div');
+                cell.className = `cell ${(r + c) % 2 === 0 ? 'white' : 'black'}`;
+                cell.id = `cell-${r}-${c}`;
+                container.appendChild(cell);
+            }
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('attempts').innerText = attempts;
+        document.getElementById('backtracks').innerText = backtracks;
+    }
+
+    function makeInstant() {
+        skipAnimation = true;
+        document.getElementById('instantBtn').style.display = "none";
+    }
+
+    async function isSafe(row, col) {
+        for (let i = 0; i < row; i++) if (board[i][col] === 1) return false;
+        for (let i = row, j = col; i >= 0 && j >= 0; i--, j--) if (board[i][j] === 1) return false;
+        for (let i = row, j = col; i >= 0 && j < N; i--, j++) if (board[i][j] === 1) return false;
+        return true;
+    }
+
+    async function solve() {
+        if(isRunning) return;
+        resetBoard();
+        isRunning = true;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('instantBtn').style.display = "inline-block";
+        
+        if (await solveRecursive(0)) {
+            document.getElementById('status').innerText = "✅ Solution Found!";
+        } else {
+            document.getElementById('status').innerText = "❌ No Solution Exists";
+        }
+        
+        isRunning = false;
+        document.getElementById('instantBtn').style.display = "none";
+    }
+
+    async function solveRecursive(row) {
+        if (row >= N) return true;
+
+        for (let col = 0; col < N; col++) {
+            attempts++;
+            
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            cell.innerText = "👑";
+            
+            if (!skipAnimation) {
+                updateStats();
+                await new Promise(r => setTimeout(r, 50)); 
+            }
+
+            if (await isSafe(row, col)) {
+                board[row][col] = 1;
+                cell.style.color = "#27ae60"; 
+                
+                if (await solveRecursive(row + 1)) {
+                    if(skipAnimation) {
+                        cell.innerText = "👑";
+                        updateStats();
+                    }
+                    return true;
+                }
+
+                backtracks++;
+                board[row][col] = 0;
+                cell.style.color = "black";
+            }
+
+            cell.innerText = "";
+            if (!skipAnimation || attempts % 100 === 0) updateStats();
+        }
+        return false;
+    }
+
+    function goHome(e) {
+        e.preventDefault();
+        const t = document.getElementById('pg-transition');
+        t.classList.add('active');
+        setTimeout(() => { window.location.href = 'index.html'; }, 350);
+    }
+
+    resetBoard();
+</script>
+</body>
+</html>

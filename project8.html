@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAA Lab: Huffman Coding</title>
+<style>
+:root{
+  --bg:#050811; --card:#0d1528; --border:rgba(99,179,255,0.12);
+  --accent:#6366f1; --accent2:#a5b4fc; --text:#e2e8f0; --muted:#64748b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+body{
+  font-family:'Segoe UI',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; padding-bottom:56px;
+}
+body::after{
+  content:''; position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+  background-size:60px 60px; pointer-events:none; z-index:0;
+}
+
+/* ── BACK BTN ── */
+.back-btn{
+  position:fixed; top:18px; left:20px; z-index:9999;
+  display:flex; align-items:center; gap:8px; padding:9px 18px;
+  background:rgba(13,21,40,0.85); border:1px solid rgba(99,179,255,0.2);
+  border-radius:8px; color:#93c5fd; font-family:'Courier New',monospace;
+  font-size:0.78rem; font-weight:700; letter-spacing:1px; text-decoration:none;
+  backdrop-filter:blur(12px); transition:all 0.2s;
+}
+.back-btn:hover{ background:rgba(59,130,246,0.15); border-color:rgba(99,179,255,0.45); color:#bfdbfe; transform:translateX(-2px); }
+.page-transition{ position:fixed; inset:0; background:#050811; z-index:99999; pointer-events:none; opacity:0; transition:opacity 0.35s ease; }
+.page-transition.active{ opacity:1; pointer-events:all; }
+
+header{ position:relative; z-index:1; text-align:center; padding:70px 20px 20px; }
+header h1{ font-size:1.9rem; font-weight:800; color:var(--accent); margin-bottom:6px; letter-spacing:-0.5px; }
+header p{ color:var(--muted); font-size:0.9rem; }
+
+.container{
+  position:relative; z-index:1; max-width:1080px;
+  margin:0 auto; padding:0 20px; display:flex; flex-direction:column; gap:20px;
+}
+
+/* ── PANELS ── */
+.panel{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; }
+.panel-title{
+  font-family:'Courier New',monospace; font-size:0.73rem; letter-spacing:3px;
+  text-transform:uppercase; color:var(--accent); margin-bottom:18px;
+}
+
+/* ── CHAR EDITOR ── */
+.editor-layout{ display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+.char-table-wrap{ flex:1; min-width:280px; }
+.char-table{
+  width:100%; border-collapse:collapse;
+  font-family:'Courier New',monospace; font-size:0.83rem;
+}
+.char-table th{
+  background:#060f20; padding:9px 12px; border:1px solid #1e3a5f;
+  color:#64748b; text-align:left; font-weight:600;
+}
+.char-table td{ padding:6px 10px; border:1px solid #0f2035; }
+.char-table tr:nth-child(even) td{ background:rgba(99,102,241,0.03); }
+.ct-char{ width:56px; }
+.ct-freq{ width:80px; }
+.ct-del{ width:36px; text-align:center; }
+.cell-input{
+  background:#040a14; border:1px solid var(--border); color:var(--text);
+  border-radius:5px; padding:5px 8px; font-size:0.83rem;
+  font-family:'Courier New',monospace; width:100%; outline:none;
+  transition:border-color 0.18s;
+}
+.cell-input:focus{ border-color:rgba(99,102,241,0.55); }
+.del-btn{
+  background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25);
+  color:#fca5a5; border-radius:5px; padding:4px 8px; cursor:pointer;
+  font-size:0.78rem; transition:all 0.18s;
+}
+.del-btn:hover{ background:rgba(239,68,68,0.25); }
+
+.editor-actions{ display:flex; flex-direction:column; gap:10px; min-width:180px; }
+
+.btn{
+  padding:10px 18px; border:none; border-radius:8px; font-weight:700;
+  cursor:pointer; font-size:0.85rem; transition:all 0.2s;
+  font-family:'Segoe UI',sans-serif; text-align:center;
+}
+.btn-add{
+  background:rgba(99,102,241,0.15); color:#a5b4fc;
+  border:1px solid rgba(99,102,241,0.4);
+}
+.btn-add:hover{ background:rgba(99,102,241,0.28); transform:translateY(-1px); }
+.btn-run{
+  background:rgba(99,102,241,0.22); color:#c4b5fd;
+  border:1px solid rgba(99,102,241,0.5);
+  box-shadow:0 0 20px rgba(99,102,241,0.12);
+}
+.btn-run:hover{ background:rgba(99,102,241,0.36); box-shadow:0 0 28px rgba(99,102,241,0.25); transform:translateY(-1px); }
+.btn-preset{
+  background:rgba(16,185,129,0.12); color:#6ee7b7;
+  border:1px solid rgba(16,185,129,0.3);
+}
+.btn-preset:hover{ background:rgba(16,185,129,0.22); }
+.btn-clear-all{
+  background:rgba(239,68,68,0.1); color:#fca5a5;
+  border:1px solid rgba(239,68,68,0.25);
+}
+.btn-clear-all:hover{ background:rgba(239,68,68,0.2); }
+
+.speed-wrap{ display:flex; flex-direction:column; gap:5px; }
+.speed-wrap label{ font-size:0.73rem; color:var(--muted); }
+.speed-row{ display:flex; align-items:center; gap:10px; }
+.speed-row input[type=range]{ flex:1; cursor:pointer; accent-color:var(--accent); }
+.speed-row span{ font-family:'Courier New',monospace; font-size:0.78rem; color:var(--accent); min-width:18px; }
+
+.validation-msg{ font-family:'Courier New',monospace; font-size:0.74rem; min-height:18px; margin-top:6px; }
+.validation-msg.err{ color:#f87171; }
+.validation-msg.ok{ color:#6ee7b7; }
+
+/* ── MERGE LOG ── */
+.merge-log{
+  background:#040a14; border:1px solid var(--border); border-radius:10px;
+  padding:14px; max-height:220px; overflow-y:auto;
+  font-family:'Courier New',monospace; font-size:0.74rem; line-height:1.8;
+}
+.ml-merge{ color:#6ee7b7; }
+.ml-init{ color:#a5b4fc; }
+.ml-done{ color:#fcd34d; font-weight:700; }
+.ml-step{ color:#93c5fd; }
+
+/* ── TREE CANVAS ── */
+#huffCanvas{
+  width:100%; background:#040a14;
+  border-radius:10px; border:1px solid var(--border); display:block;
+}
+
+/* ── TWO-COL ── */
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:640px){ .two-col{ grid-template-columns:1fr; } }
+
+/* ── CODE TABLE ── */
+.code-table{ width:100%; border-collapse:collapse; font-family:'Courier New',monospace; font-size:0.82rem; }
+.code-table th{
+  background:#060f20; padding:9px 14px;
+  border:1px solid #1e3a5f; color:#64748b; text-align:left;
+}
+.code-table td{ padding:9px 14px; border:1px solid #0f2035; color:var(--text); }
+.code-table tr:nth-child(even) td{ background:rgba(99,102,241,0.04); }
+.code-hl{ color:#a5b4fc; font-weight:700; letter-spacing:1px; }
+
+/* ── STAT GRID ── */
+.stat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.stat-box{ background:#040a14; border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
+.sv{ font-family:'Courier New',monospace; font-size:1.3rem; font-weight:700; color:var(--accent); }
+.sl{ font-size:0.65rem; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<div class="page-transition" id="pg-transition"></div>
+<a class="back-btn" href="index.html" onclick="goHome(event)">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <path d="M19 12H5M12 19l-7-7 7-7"/>
+  </svg>BACK TO HOME
+</a>
+
+<header>
+  <h1>Huffman Coding</h1>
+  <p>Enter characters &amp; frequencies manually — build the optimal prefix-free code tree step by step</p>
+</header>
+
+<div class="container">
+
+  <!-- ── CHARACTER / FREQUENCY EDITOR ── -->
+  <div class="panel">
+    <div class="panel-title">// Character &amp; Frequency Input</div>
+    <div class="editor-layout">
+
+      <div class="char-table-wrap">
+        <table class="char-table" id="charTable">
+          <thead>
+            <tr>
+              <th class="ct-char">Char</th>
+              <th class="ct-freq">Frequency</th>
+              <th class="ct-del"></th>
+            </tr>
+          </thead>
+          <tbody id="charTableBody"></tbody>
+        </table>
+        <div class="validation-msg" id="validMsg"></div>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn btn-add" onclick="addRow()">➕ Add Character</button>
+        <button class="btn btn-preset" onclick="loadPreset('english')">📋 English Sample</button>
+        <button class="btn btn-preset" onclick="loadPreset('dna')">🧬 DNA Bases</button>
+        <button class="btn btn-preset" onclick="loadPreset('simple')">⚡ Simple Set</button>
+        <button class="btn btn-clear-all" onclick="clearAll()">🗑 Clear All</button>
+        <div class="sep" style="height:1px;background:var(--border);margin:4px 0"></div>
+        <div class="speed-wrap">
+          <label>Animation Speed</label>
+          <div class="speed-row">
+            <input type="range" id="huffSpeed" min="1" max="10" value="6"
+              oninput="huffSpeedVal=parseInt(this.value);document.getElementById('huffSpeedLabel').textContent=huffSpeedVal">
+            <span id="huffSpeedLabel">6</span>
+          </div>
+        </div>
+        <button class="btn btn-run" onclick="runHuffman()">▶ Build Huffman Tree</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BUILD LOG ── -->
+  <div class="panel">
+    <div class="panel-title">// Build Log — Min-Heap Merges</div>
+    <div class="merge-log" id="mergeLog">
+      <span style="color:#334155">Add characters with frequencies and click ▶ Build Huffman Tree...</span>
+    </div>
+  </div>
+
+  <!-- ── TREE ── -->
+  <div class="panel">
+    <div class="panel-title">// Huffman Tree &nbsp;<span style="color:#334155;font-size:0.68rem">(0 = left branch · 1 = right branch)</span></div>
+    <canvas id="huffCanvas" height="360"></canvas>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div class="two-col">
+
+    <div class="panel">
+      <div class="panel-title">// Code Table</div>
+      <table class="code-table" id="codeTable">
+        <tr><th>Char</th><th>Freq</th><th>Code</th><th>Bits / Symbol</th></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// Compression Stats</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="sv" id="hTotalFreq">—</div><div class="sl">Total Symbols</div></div>
+        <div class="stat-box"><div class="sv" id="hUniqueChars">—</div><div class="sl">Unique Chars</div></div>
+        <div class="stat-box"><div class="sv" id="hOrigBits">—</div><div class="sl">Fixed-Width Bits</div></div>
+        <div class="stat-box"><div class="sv" id="hEncBits">—</div><div class="sl">Huffman Bits</div></div>
+        <div class="stat-box" style="grid-column:span 2">
+          <div class="sv" id="hRatio">—</div>
+          <div class="sl">Space Saved vs 8-bit ASCII</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let huffSpeedVal = 6;
+let rowCounter   = 0;
+
+const sleep      = ms => new Promise(r => setTimeout(r, ms));
+function huffDelay() { return Math.max(60, (11 - huffSpeedVal) * 130); }
+
+/* ═══════════════════════════════════════
+   ROW MANAGEMENT
+═══════════════════════════════════════ */
+function addRow(char = '', freq = '') {
+  const tbody = document.getElementById('charTableBody');
+  const id    = rowCounter++;
+  const tr    = document.createElement('tr');
+  tr.id = `row-${id}`;
+  tr.innerHTML = `
+    <td class="ct-char">
+      <input class="cell-input char-input" maxlength="1" placeholder="A"
+        value="${char}" oninput="validate()">
+    </td>
+    <td class="ct-freq">
+      <input class="cell-input freq-input" type="number" min="1" max="9999"
+        placeholder="1" value="${freq}" oninput="validate()">
+    </td>
+    <td class="ct-del">
+      <button class="del-btn" onclick="deleteRow(${id})">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('.char-input').focus();
+  validate();
+}
+
+function deleteRow(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (row) { row.remove(); validate(); }
+}
+
+function clearAll() {
+  document.getElementById('charTableBody').innerHTML = '';
+  clearResults();
+  validate();
+}
+
+function getEntries() {
+  const rows = document.querySelectorAll('#charTableBody tr');
+  const out  = [];
+  rows.forEach(tr => {
+    const c = tr.querySelector('.char-input').value.trim();
+    const f = parseInt(tr.querySelector('.freq-input').value);
+    if (c && f > 0) out.push({ char: c, freq: f });
+  });
+  return out;
+}
+
+function validate() {
+  const entries = getEntries();
+  const msg     = document.getElementById('validMsg');
+  if (entries.length === 0) {
+    msg.textContent = ''; msg.className = 'validation-msg'; return false;
+  }
+  /* check duplicates */
+  const seen = new Set();
+  for (const e of entries) {
+    if (seen.has(e.char)) {
+      msg.textContent = `⚠ Duplicate character "${e.char}"`;
+      msg.className   = 'validation-msg err'; return false;
+    }
+    seen.add(e.char);
+  }
+  /* check negative/zero freq */
+  if (entries.some(e => e.freq <= 0)) {
+    msg.textContent = '⚠ All frequencies must be ≥ 1';
+    msg.className   = 'validation-msg err'; return false;
+  }
+  msg.textContent = `✓ ${entries.length} character${entries.length > 1 ? 's' : ''} ready`;
+  msg.className   = 'validation-msg ok';
+  return true;
+}
+
+/* ═══════════════════════════════════════
+   PRESETS
+═══════════════════════════════════════ */
+const PRESETS = {
+  english: [
+    {char:'E',freq:130},{char:'T',freq:91},{char:'A',freq:82},
+    {char:'O',freq:75},{char:'I',freq:70},{char:'N',freq:67},
+    {char:'S',freq:63},{char:'H',freq:61},{char:'R',freq:60},
+  ],
+  dna: [
+    {char:'A',freq:35},{char:'C',freq:25},{char:'G',freq:20},{char:'T',freq:20},
+  ],
+  simple: [
+    {char:'a',freq:5},{char:'b',freq:2},{char:'c',freq:1},
+    {char:'d',freq:3},{char:'e',freq:4},
+  ],
+};
+
+function loadPreset(key) {
+  clearAll();
+  PRESETS[key].forEach(e => addRow(e.char, e.freq));
+  validate();
+}
+
+/* ═══════════════════════════════════════
+   CLEAR RESULTS
+═══════════════════════════════════════ */
+function clearResults() {
+  document.getElementById('mergeLog').innerHTML =
+    '<span style="color:#334155">Add characters with frequencies and click ▶ Build Huffman Tree...</span>';
+  document.getElementById('codeTable').innerHTML =
+    '<tr><th>Char</th><th>Freq</th><th>Code</th><th>Bits / Symbol</th></tr>';
+  ['hTotalFreq','hUniqueChars','hOrigBits','hEncBits','hRatio'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  const c = document.getElementById('huffCanvas');
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+/* ═══════════════════════════════════════
+   MERGE LOG HELPER
+═══════════════════════════════════════ */
+function mlog(msg, cls = '') {
+  const lb = document.getElementById('mergeLog');
+  lb.innerHTML += `<div class="${cls}">${msg}</div>`;
+  lb.scrollTop  = lb.scrollHeight;
+}
+
+/* ═══════════════════════════════════════
+   MAIN HUFFMAN RUNNER
+═══════════════════════════════════════ */
+async function runHuffman() {
+  if (!validate()) {
+    if (getEntries().length === 0) alert('Add at least one character with a frequency!');
+    return;
+  }
+
+  clearResults();
+  document.getElementById('mergeLog').innerHTML = '';
+
+  const entries = getEntries();
+
+  /* ── edge case: single character ── */
+  if (entries.length === 1) {
+    const { char, freq } = entries[0];
+    const root  = { char, freq, left: null, right: null };
+    const codes = { [char]: '0' };
+    mlog(`Single character '${char}' — assigned code: 0`, 'ml-done');
+    finalise(entries, codes, root);
+    return;
+  }
+
+  /* ── build initial priority queue ── */
+  let pq = entries.map(e => ({ char: e.char, freq: e.freq, left: null, right: null }));
+  pq.sort((a, b) => a.freq - b.freq);
+
+  mlog(`Initialised priority queue (${pq.length} leaf nodes):`, 'ml-init');
+  mlog('  ' + pq.map(n => `${n.char}(${n.freq})`).join('  '), 'ml-init');
+  await sleep(huffDelay());
+
+  /* ── merge loop ── */
+  let step = 1;
+  while (pq.length > 1) {
+    pq.sort((a, b) => a.freq - b.freq);
+
+    const left  = pq.shift();
+    const right = pq.shift();
+    const merged = { char: null, freq: left.freq + right.freq, left, right };
+    pq.push(merged);
+
+    const lL = left.char  !== null ? `'${left.char}'`  : `*(${left.freq})`;
+    const rL = right.char !== null ? `'${right.char}'` : `*(${right.freq})`;
+
+    mlog(`Step ${step}: merge ${lL}(${left.freq}) + ${rL}(${right.freq}) → internal node(${merged.freq})`, 'ml-merge');
+    mlog(`  Queue: [${pq.slice().sort((a,b)=>a.freq-b.freq).map(n=>n.char?`${n.char}(${n.freq})`:`*(${n.freq})`).join(', ')}]`, 'ml-step');
+    step++;
+    await sleep(huffDelay());
+  }
+
+  const root  = pq[0];
+  const codes = {};
+  buildCodes(root, '', codes);
+
+  mlog('', '');
+  mlog('Tree complete — assigning Huffman codes...', 'ml-done');
+  await sleep(huffDelay() / 2);
+
+  finalise(entries, codes, root);
+}
+
+/* ═══════════════════════════════════════
+   BUILD CODES (DFS)
+═══════════════════════════════════════ */
+function buildCodes(node, prefix, codes) {
+  if (!node) return;
+  if (node.char !== null) { codes[node.char] = prefix || '0'; return; }
+  buildCodes(node.left,  prefix + '0', codes);
+  buildCodes(node.right, prefix + '1', codes);
+}
+
+/* ═══════════════════════════════════════
+   FINALISE — code table, stats, tree
+═══════════════════════════════════════ */
+function finalise(entries, codes, root) {
+  const freqMap = {};
+  entries.forEach(e => { freqMap[e.char] = e.freq; });
+
+  /* code table */
+  const tbl = document.getElementById('codeTable');
+  tbl.innerHTML = '<tr><th>Char</th><th>Freq</th><th>Code</th><th>Bits / Symbol</th></tr>';
+
+  let totalFreq = 0, origBits = 0, encBits = 0;
+
+  /* sort by code length asc, then char asc */
+  const sortedCodes = Object.entries(codes).sort((a, b) =>
+    a[1].length !== b[1].length ? a[1].length - b[1].length : a[0].localeCompare(b[0])
+  );
+
+  sortedCodes.forEach(([c, code]) => {
+    const f = freqMap[c] || 0;
+    totalFreq += f;
+    origBits  += f * 8;
+    encBits   += f * code.length;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${c}</td>
+      <td>${f}</td>
+      <td class="code-hl">${code}</td>
+      <td>${code.length} bit${code.length !== 1 ? 's' : ''}</td>`;
+    tbl.appendChild(tr);
+  });
+
+  /* stats */
+  const savings = origBits > 0
+    ? (100 - (encBits / origBits * 100)).toFixed(1) + '% saved'
+    : '—';
+
+  document.getElementById('hTotalFreq').textContent  = totalFreq;
+  document.getElementById('hUniqueChars').textContent = entries.length;
+  document.getElementById('hOrigBits').textContent   = origBits;
+  document.getElementById('hEncBits').textContent    = encBits;
+  document.getElementById('hRatio').textContent      = savings;
+
+  mlog(`Fixed-width: ${origBits} bits → Huffman: ${encBits} bits  (${savings})`, 'ml-done');
+
+  /* draw tree */
+  drawTree(root);
+}
+
+/* ═══════════════════════════════════════
+   DRAW HUFFMAN TREE
+═══════════════════════════════════════ */
+function drawTree(root) {
+  const canvas = document.getElementById('huffCanvas');
+  const W      = canvas.offsetWidth || 1000;
+
+  /* compute tree depth to pick vertical level height */
+  function treeH(n) { return n ? 1 + Math.max(treeH(n.left), treeH(n.right)) : 0; }
+  const depth  = treeH(root);
+  const levelH = Math.min(72, Math.max(44, Math.floor(320 / Math.max(depth, 1))));
+  const H      = levelH * depth + 40;
+
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx    = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const NODE_R = 20;
+
+  function draw(node, x, y, spread) {
+    if (!node) return;
+
+    /* left child */
+    if (node.left) {
+      const lx = x - spread, ly = y + levelH;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(lx, ly);
+      ctx.strokeStyle = 'rgba(99,102,241,0.5)'; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle   = '#6366f1';
+      ctx.font        = 'bold 10px Courier New';
+      ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('0', x - spread * 0.44, y + levelH * 0.36);
+      draw(node.left, lx, ly, spread / 2);
+    }
+    /* right child */
+    if (node.right) {
+      const rx = x + spread, ry = y + levelH;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(rx, ry);
+      ctx.strokeStyle = 'rgba(167,139,250,0.5)'; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle   = '#a78bfa';
+      ctx.font        = 'bold 10px Courier New';
+      ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('1', x + spread * 0.44, y + levelH * 0.36);
+      draw(node.right, rx, ry, spread / 2);
+    }
+
+    /* node circle */
+    const isLeaf = node.char !== null;
+    ctx.beginPath(); ctx.arc(x, y, NODE_R, 0, Math.PI * 2);
+    ctx.fillStyle   = isLeaf ? 'rgba(16,185,129,0.22)' : 'rgba(99,102,241,0.18)';
+    ctx.fill();
+    ctx.strokeStyle = isLeaf ? '#10b981' : '#6366f1';
+    ctx.lineWidth   = 1.8; ctx.stroke();
+
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (isLeaf) {
+      /* char label */
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font      = 'bold 12px Courier New';
+      ctx.fillText(node.char, x, y - 5);
+      /* freq label */
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font      = '9px Courier New';
+      ctx.fillText(node.freq, x, y + 7);
+    } else {
+      /* internal node: just show freq */
+      ctx.fillStyle = '#a5b4fc';
+      ctx.font      = '10px Courier New';
+      ctx.fillText(node.freq, x, y);
+    }
+  }
+
+  draw(root, W / 2, 28, W / 4.5);
+}
+
+/* ═══════════════════════════════════════
+   NAV
+═══════════════════════════════════════ */
+function goHome(e) {
+  e.preventDefault();
+  document.getElementById('pg-transition').classList.add('active');
+  setTimeout(() => { window.location.href = 'index.html'; }, 350);
+}
+
+/* ── boot: load simple preset by default ── */
+loadPreset('simple');
+</script>
+</body>
+</html>
