@@ -87,7 +87,8 @@ body::after{
   border-right:1px solid var(--border);
   display:flex; flex-direction:column;
   padding:0 0 24px 0;
-  transition:transform 0.3s ease;
+  overflow-y:auto;
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* logo area */
@@ -268,7 +269,8 @@ body::after{
 /* ══════════════════════════════════════════
    PROJECTS — HORIZONTAL SCROLL
 ══════════════════════════════════════════ */
-.projects-scroll-wrap{ position:relative; }
+.projects-scroll-wrap{ position:relative; padding:0 20px; margin:0 -20px; }
+@media(max-width:900px){ .projects-scroll-wrap{ padding:0; margin:0; } }
 .projects-scroll{
   display:flex; gap:18px;
   overflow-x:auto; padding:4px 2px 14px;
@@ -404,7 +406,6 @@ body::after{
    LEARNING FLOW TIMELINE
 ══════════════════════════════════════════ */
 .flow-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
-@media(max-width:860px){ .flow-grid{ grid-template-columns:1fr; } }
 
 .flow-card{
   background:var(--card2); border:1px solid var(--border);
@@ -480,41 +481,179 @@ body::after{
    MOBILE SIDEBAR TOGGLE
 ══════════════════════════════════════════ */
 .sidebar-toggle{
-  display:none; position:fixed; top:14px; left:14px; z-index:300;
-  width:38px; height:38px; border-radius:9px;
-  background:rgba(13,21,40,0.9); border:1px solid var(--border2);
-  color:var(--text2); cursor:pointer; font-size:1rem;
-  align-items:center; justify-content:center; backdrop-filter:blur(12px);
+  display:none; position:fixed; top:13px; left:13px; z-index:300;
+  width:40px; height:40px; border-radius:10px;
+  background:rgba(8,15,30,0.92); border:1px solid var(--border2);
+  color:var(--text2); cursor:pointer; font-size:1.15rem;
+  align-items:center; justify-content:center; backdrop-filter:blur(16px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.4); transition:all 0.25s;
 }
+.sidebar-toggle:hover{ background:rgba(59,130,246,0.18); border-color:rgba(59,130,246,0.4); color:var(--accent); }
+
 .sidebar-overlay{
   display:none; position:fixed; inset:0; z-index:190;
-  background:rgba(0,0,0,0.5); backdrop-filter:blur(3px);
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+}
+.sidebar-overlay.show{ display:block; }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — TABLET  ≤ 1024px
+══════════════════════════════════════════ */
+@media(max-width:1024px){
+  .content{ max-width:100%; }
+  .hero-strip{ padding:32px 36px; gap:20px; }
+  .hero-stats{ gap:24px; }
 }
 
 /* ══════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — TABLET/MOBILE  ≤ 900px
+   Sidebar collapses off-canvas
 ══════════════════════════════════════════ */
 @media(max-width:900px){
-  .sidebar{ transform:translateX(-100%); }
-  .sidebar.open{ transform:translateX(0); }
+  /* body layout */
+  body{ display:block; }
+
+  /* sidebar becomes a drawer */
+  .sidebar{
+    transform:translateX(-100%);
+    box-shadow:none;
+    width:260px;
+    /* make it scrollable if content is tall */
+    overflow-y:auto;
+  }
+  .sidebar.open{
+    transform:translateX(0);
+    box-shadow:4px 0 40px rgba(0,0,0,0.5);
+  }
+
+  /* main content fills full width */
   .main-wrap{ margin-left:0; }
+
+  /* show hamburger button */
   .sidebar-toggle{ display:flex; }
-  .sidebar-overlay.show{ display:block; }
-  .content{ padding:28px 20px 48px; }
-  .topbar{ padding:14px 20px; padding-left:64px; }
-  .hero-strip{ padding:28px 24px; }
-  .hero-stats{ gap:20px; }
-  .hs-n{ font-size:1.5rem; }
-  .flow-grid{ grid-template-columns:1fr; }
+
+  /* topbar: add left padding so title doesn't sit behind hamburger */
+  .topbar{ padding:13px 20px 13px 64px; }
+  .topbar-title{ font-size:0.85rem; }
+
+  /* content padding */
+  .content{ padding:24px 18px 52px; gap:36px; }
+
+  /* hero strip: stack vertically */
+  .hero-strip{
+    flex-direction:column; align-items:flex-start;
+    padding:24px 22px; gap:24px;
+  }
+  .hero-stats{ gap:24px; align-self:flex-start; }
+  .hs-n{ font-size:1.6rem; }
+  .hs-l{ font-size:0.6rem; }
+  .hero-h1{ font-size:clamp(1.7rem,5vw,2.2rem); }
+  .hero-eyebrow{ font-size:0.62rem; }
+  .hero-p{ font-size:0.88rem; max-width:100%; }
+  .hero-btn{ padding:10px 22px; font-size:0.82rem; }
+
+  /* projects scroll — hide side arrows, rely on touch swipe */
+  .scroll-arrow{ display:none; }
+  .projects-scroll{ padding:4px 4px 16px; gap:14px; }
+  .proj-card{ width:240px; padding:20px; }
+
+  /* concepts grid */
+  .concepts-grid{ grid-template-columns:repeat(2,1fr); gap:12px; }
+  .cc-icon{ font-size:1.5rem; margin-bottom:10px; }
+  .cc-title{ font-size:0.88rem; }
+  .cc-desc{ font-size:0.75rem; }
+
+  /* flow — single column */
+  .flow-grid{ grid-template-columns:1fr; gap:12px; }
+  .flow-card{ padding:20px; }
+
+  /* roadmap */
+  .roadmap-grid{ grid-template-columns:repeat(2,1fr); gap:12px; }
+
+  /* footer */
+  .dash-footer{
+    padding:18px 20px; flex-direction:column;
+    align-items:flex-start; gap:4px; font-size:0.68rem;
+  }
+
+  /* section headers */
+  .sec-title{ font-size:1.25rem; }
+  .sec-sub{ font-size:0.82rem; }
+  .sec-tag{ font-size:0.6rem; letter-spacing:3px; }
 }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — SMALL PHONE  ≤ 600px
+══════════════════════════════════════════ */
 @media(max-width:600px){
-  .hero-h1{ font-size:1.6rem; }
-  .concepts-grid{ grid-template-columns:1fr 1fr; }
-  .roadmap-grid{ grid-template-columns:1fr 1fr; }
+  .topbar-badge{ display:none; }
+
+  /* hero */
+  .hero-strip{ padding:20px 18px; gap:20px; }
+  .hero-h1{ font-size:clamp(1.5rem,7vw,2rem); letter-spacing:-0.5px; }
+  .hero-stats{ gap:18px; }
+  .hs-n{ font-size:1.4rem; }
+  .hero-actions{ gap:10px; }
+  .hero-btn{ padding:9px 18px; font-size:0.8rem; }
+
+  /* projects: narrower card so 1.2 cards visible at once = discoverable scroll */
+  .proj-card{ width:220px; padding:18px; }
+  .proj-title{ font-size:0.92rem; }
+  .proj-desc{ font-size:0.76rem; }
+  .proj-icon{ width:40px; height:40px; font-size:1.2rem; margin-bottom:14px; }
+  .ptag{ font-size:0.56rem; padding:2px 7px; }
+
+  /* concepts: 2 col still works at 600 */
+  .concepts-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
+  .concept-card{ padding:16px 14px 14px; }
+  .cc-badge{ font-size:0.56rem; padding:2px 7px; }
+
+  /* flow */
+  .flow-card{ padding:18px; }
+  .flow-step{ width:36px; height:36px; font-size:0.78rem; margin-bottom:12px; }
+  .flow-title{ font-size:0.92rem; }
+  .flow-desc{ font-size:0.76rem; }
+
+  /* roadmap */
+  .roadmap-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
+  .roadmap-card{ padding:14px 14px 12px; }
+  .rm-title{ font-size:0.82rem; }
+  .rm-desc{ font-size:0.7rem; }
+  .rm-badge{ font-size:0.54rem; padding:2px 7px; }
+
+  /* sidebar narrower on small phones */
+  .sidebar{ width:240px; }
+
+  /* content */
+  .content{ padding:18px 14px 48px; gap:28px; }
 }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — VERY SMALL  ≤ 420px
+══════════════════════════════════════════ */
 @media(max-width:420px){
+  .hero-h1{ font-size:1.4rem; }
+  .hero-strip{ padding:18px 14px; }
+  .hero-stats{ flex-wrap:wrap; gap:14px; }
+
+  /* single column everywhere */
   .concepts-grid{ grid-template-columns:1fr; }
   .roadmap-grid{ grid-template-columns:1fr; }
+
+  /* project cards fill most of viewport width */
+  .proj-card{ width:calc(100vw - 56px); }
+
+  /* topbar */
+  .topbar{ padding:12px 14px 12px 58px; }
+  .topbar-title{ font-size:0.78rem; }
+
+  /* content */
+  .content{ padding:14px 12px 44px; gap:24px; }
+  .sec-title{ font-size:1.15rem; }
+
+  /* sidebar */
+  .sidebar{ width:220px; }
+  .sidebar-toggle{ top:11px; left:11px; width:37px; height:37px; font-size:1.05rem; }
 }
 </style>
 </head>
@@ -578,15 +717,23 @@ body::after{
   <a class="nav-item" href="project4.html" onclick="navigate(event,'project4.html')">
     <span class="nav-icon">🕸</span><span>Graph Algorithms</span>
   </a>
+  <a class="nav-item" href="project5.html" onclick="navigate(event,'project5.html')">
+    <span class="nav-icon">🎒</span><span>Knapsack</span>
+  </a>
+  <a class="nav-item" href="project6.html" onclick="navigate(event,'project6.html')">
+    <span class="nav-icon">🔤</span><span>String Matching</span>
+  </a>
+  <a class="nav-item" href="project7.html" onclick="navigate(event,'project7.html')">
+    <span class="nav-icon">🐭</span><span>Rat in a Maze</span>
+  </a>
   <a class="nav-item" href="project8.html" onclick="navigate(event,'project8.html')">
     <span class="nav-icon">🌳</span><span>Huffman Coding</span>
   </a>
 
-
   <div class="sidebar-footer">
     <div class="sidebar-stat-row">
-      <div class="sidebar-stat"><div class="sv">5</div><div class="sl">Projects</div></div>
-      <div class="sidebar-stat"><div class="sv">10+</div><div class="sl">Algos</div></div>
+      <div class="sidebar-stat"><div class="sv">8</div><div class="sl">Projects</div></div>
+      <div class="sidebar-stat"><div class="sv">20+</div><div class="sl">Algos</div></div>
     </div>
   </div>
 
@@ -626,8 +773,8 @@ body::after{
         </div>
       </div>
       <div class="hero-stats">
-        <div class="hs"><div class="hs-n">5</div><div class="hs-l">Projects</div></div>
-        <div class="hs"><div class="hs-n">10+</div><div class="hs-l">Algorithms</div></div>
+        <div class="hs"><div class="hs-n">8</div><div class="hs-l">Projects</div></div>
+        <div class="hs"><div class="hs-n">20+</div><div class="hs-l">Algorithms</div></div>
         <div class="hs"><div class="hs-n">∞</div><div class="hs-l">Experiments</div></div>
       </div>
     </div>
@@ -682,8 +829,35 @@ body::after{
             <div class="proj-cta">Open Project →</div>
           </a>
 
-          <a href="project8.html" class="proj-card pc8" onclick="navigate(event,'project8.html')">
+          <a href="project5.html" class="proj-card pc5" onclick="navigate(event,'project5.html')">
             <div class="proj-num">05 /</div>
+            <div class="proj-icon">🎒</div>
+            <div class="proj-title">Knapsack Problem</div>
+            <div class="proj-desc">Compare 0/1 Knapsack (DP) vs Fractional Knapsack (Greedy). Watch the DP table fill step by step.</div>
+            <div class="proj-tags"><span class="ptag">Dynamic Programming</span><span class="ptag">Greedy</span><span class="ptag">DP Table</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project6.html" class="proj-card pc6" onclick="navigate(event,'project6.html')">
+            <div class="proj-num">06 /</div>
+            <div class="proj-icon">🔤</div>
+            <div class="proj-title">String Matching</div>
+            <div class="proj-desc">Animate Naive vs KMP pattern matching. See the prefix failure table and count shifts in real time.</div>
+            <div class="proj-tags"><span class="ptag">KMP</span><span class="ptag">Naive</span><span class="ptag">Pattern</span><span class="ptag">Prefix Table</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project7.html" class="proj-card pc7" onclick="navigate(event,'project7.html')">
+            <div class="proj-num">07 /</div>
+            <div class="proj-icon">🐭</div>
+            <div class="proj-title">Rat in a Maze</div>
+            <div class="proj-desc">Watch a rat navigate using recursive backtracking. See decision points, dead ends, and the solution path emerge.</div>
+            <div class="proj-tags"><span class="ptag">Backtracking</span><span class="ptag">Recursion</span><span class="ptag">Maze</span></div>
+            <div class="proj-cta">Open Project →</div>
+          </a>
+
+          <a href="project8.html" class="proj-card pc8" onclick="navigate(event,'project8.html')">
+            <div class="proj-num">08 /</div>
             <div class="proj-icon">🌳</div>
             <div class="proj-title">Huffman Coding</div>
             <div class="proj-desc">Enter characters and frequencies manually. Build the Huffman tree step by step and generate optimal prefix-free codes.</div>
@@ -746,6 +920,14 @@ body::after{
           <div class="cc-desc">Make locally optimal choices at each step. Activity Selection, Huffman Coding, and Fractional Knapsack are classics.</div>
           <span class="cc-badge">Local Optimal Choice</span>
         </div>
+
+        <div class="concept-card cc-pink">
+          <div class="cc-icon">🔤</div>
+          <div class="cc-title">String Algorithms</div>
+          <div class="cc-desc">Efficient pattern matching with KMP O(n+m) vs naive O(nm). The failure function enables intelligent skip-ahead.</div>
+          <span class="cc-badge">KMP · Failure Function</span>
+        </div>
+
         <div class="concept-card cc-indigo">
           <div class="cc-icon">🧩</div>
           <div class="cc-title">Divide &amp; Conquer</div>
@@ -805,6 +987,16 @@ body::after{
           <div class="rm-title">Performance Comparison</div>
           <div class="rm-desc">Side-by-side runtime and memory charts across all sorting and pathfinding algorithms.</div>
         </div>
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">🧮</span>
+            <span class="rm-badge badge-planned">Planned</span>
+          </div>
+          <div class="rm-title">Sudoku Solver</div>
+          <div class="rm-desc">Step-by-step backtracking visualizer for constraint propagation in Sudoku puzzles.</div>
+        </div>
+
         <div class="roadmap-card">
           <div class="rm-top">
             <span class="rm-icon">🌲</span>
@@ -819,14 +1011,23 @@ body::after{
             <span class="rm-icon">🔢</span>
             <span class="rm-badge badge-planned">Planned</span>
           </div>
-          <div class="rm-title">LCS</div>
-          <div class="rm-desc">Animated DP table for Longest Common Subsequence.</div>
+          <div class="rm-title">LCS / Edit Distance</div>
+          <div class="rm-desc">Animated DP table for Longest Common Subsequence and Levenshtein Edit Distance problems.</div>
+        </div>
+
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">⏱</span>
+            <span class="rm-badge badge-progress">In Progress</span>
+          </div>
+          <div class="rm-title">Step-by-Step Mode</div>
+          <div class="rm-desc">Manual step / prev / next controls across all existing visualizers for deeper inspection.</div>
         </div>
 
         <div class="roadmap-card">
           <div class="rm-top">
             <span class="rm-icon">📱</span>
-            <span class="rm-badge badge-progress">In Progress</span>
+            <span class="rm-badge badge-planned">Planned</span>
           </div>
           <div class="rm-title">Mobile Optimisation</div>
           <div class="rm-desc">Touch-friendly graph editors and responsive canvas layouts for all visualizers.</div>
@@ -841,6 +1042,15 @@ body::after{
           <div class="rm-desc">Interactive quizzes tied to each algorithm — predict the next step before it plays.</div>
         </div>
 
+        <div class="roadmap-card">
+          <div class="rm-top">
+            <span class="rm-icon">🌊</span>
+            <span class="rm-badge badge-planned">Planned</span>
+          </div>
+          <div class="rm-title">Network Flow</div>
+          <div class="rm-desc">Ford-Fulkerson max-flow algorithm with animated augmenting paths on custom networks.</div>
+        </div>
+
       </div>
     </section>
 
@@ -848,7 +1058,7 @@ body::after{
 
   <footer class="dash-footer">
     <span>DAA_LAB &nbsp;·&nbsp; Design &amp; Analysis of Algorithms &nbsp;·&nbsp; Interactive Learning Platform</span>
-    <span style="color:var(--muted)">5 Projects &nbsp;·&nbsp; 10+ Algorithms</span>
+    <span style="color:var(--muted)">8 Projects &nbsp;·&nbsp; 20+ Algorithms</span>
   </footer>
 
 </div><!-- /main-wrap -->
@@ -870,13 +1080,33 @@ function setActive(el) {
 
 /* ── SIDEBAR MOBILE ── */
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('sidebarToggle');
+  const isOpen = sb.classList.toggle('open');
+  ov.classList.toggle('show', isOpen);
+  btn.textContent = isOpen ? '✕' : '☰';
+  btn.style.left = isOpen ? '267px' : '13px';
 }
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
+  const btn = document.getElementById('sidebarToggle');
+  btn.textContent = '☰';
+  btn.style.left = '';
 }
+
+/* ── SWIPE TO CLOSE SIDEBAR ── */
+(function(){
+  let sx = null;
+  document.getElementById('sidebar').addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
+  document.getElementById('sidebar').addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (dx < -60) closeSidebar();
+    sx = null;
+  }, {passive:true});
+})();
 
 /* ── PROJECTS HORIZONTAL SCROLL ── */
 function scrollProjects(px) {
@@ -885,8 +1115,8 @@ function scrollProjects(px) {
 }
 
 /* ── ACTIVE SECTION TRACKING via IntersectionObserver ── */
-const sections = ['top','projects','concepts','flow','upcoming'];
 const navItems = document.querySelectorAll('.nav-item');
+const sectionLinks = ['#top','#projects','#concepts','#flow','#upcoming'];
 
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
@@ -894,20 +1124,15 @@ const observer = new IntersectionObserver((entries) => {
       const id = entry.target.id;
       navItems.forEach(n => {
         const href = n.getAttribute('href');
-        if (href === '#' + id || (id === 'top' && href === '#top')) {
-          n.classList.add('active');
-        } else {
-          /* only clear the top-level section nav items */
-          if (['#top','#projects','#concepts','#flow','#upcoming'].includes(href)) {
-            n.classList.remove('active');
-          }
+        const matches = href === '#' + id || (id === 'top' && href === '#top');
+        if (sectionLinks.includes(href)) {
+          n.classList.toggle('active', matches);
         }
       });
     }
   });
-}, { rootMargin:'-40% 0px -55% 0px' });
+}, { rootMargin:'-35% 0px -55% 0px', threshold: 0 });
 
-/* observe the main-wrap for #top */
 observer.observe(document.getElementById('top'));
 document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
 
@@ -920,11 +1145,16 @@ const fadeObserver = new IntersectionObserver((entries) => {
       fadeObserver.unobserve(entry.target);
     }
   });
-}, { threshold: 0.08 });
+}, { threshold: 0.06 });
 
 fadeEls.forEach(el => {
   el.style.animationPlayState = 'paused';
   fadeObserver.observe(el);
+});
+
+/* ── CLOSE SIDEBAR ON RESIZE TO DESKTOP ── */
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 900) closeSidebar();
 });
 </script>
 </body>
