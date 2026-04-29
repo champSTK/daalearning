@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Lab: Sorting Efficiency Race (Numbers UI)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ── BACK BUTTON ── */
+        .back-btn {
+            position: fixed;
+            top: 18px; left: 20px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: rgba(13,21,40,0.85);
+            border: 1px solid rgba(99,179,255,0.2);
+            border-radius: 8px;
+            color: #93c5fd;
+            font-family: 'Space Mono', 'Courier New', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(99,179,255,0.45); color: #bfdbfe; transform: translateX(-2px); }
+        .back-btn svg { transition: transform 0.2s; }
+        .back-btn:hover svg { transform: translateX(-3px); }
+
+        /* ── PAGE TRANSITION ── */
+        .page-transition { position: fixed; inset: 0; background: #050811; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+        .page-transition.active { opacity: 1; pointer-events: all; }
+
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; padding-top: 70px; }
+        .controls { margin-bottom: 20px; display: flex; gap: 20px; align-items: center; background: #1e1e1e; padding: 15px 25px; border-radius: 10px; border: 1px solid #333; flex-wrap: wrap; justify-content: center; }
+        .slider-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        label { font-size: 0.9em; color: #aaa; font-weight: bold; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; background: #3498db; color: white; font-weight: bold; transition: 0.2s; align-self: center; }
+        button:hover { background: #2980b9; transform: translateY(-2px); }
+        button.reset { background: #e74c3c; }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; max-width: 1000px; }
+        .algo-box { border: 1px solid #333; padding: 15px; background: #1e1e1e; text-align: center; border-radius: 10px; }
+        
+        /* ── VISUALIZER UX ── */
+        .visualizer { 
+            height: 180px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            align-content: flex-start;
+            justify-content: center;
+            gap: 4px; 
+            background: #0a0a0a; 
+            padding: 10px; 
+            border-radius: 6px; 
+            margin: 10px 0; 
+            overflow-y: auto;
+        }
+        .num-box { 
+            background: #2c3e50; 
+            color: #ecf0f1;
+            padding: 4px; 
+            border-radius: 4px; 
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+            min-width: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        
+        .stats { font-size: 0.85em; color: #aaa; font-family: monospace; min-height: 1.2em; }
+        .chart-container { width: 100%; max-width: 800px; background: #2c3e50; padding: 20px; margin-top: 30px; border-radius: 12px; display: none; }
+        h1 { color: #2ecc71; margin-bottom: 5px; text-align: center; }
+        .highlight { background: #e74c3c !important; color: #fff; transform: scale(1.15); z-index: 2; box-shadow: 0 0 8px rgba(231, 76, 60, 0.6); }
+        input[type=range] { cursor: pointer; width: 150px; }
+    </style>
+</head>
+<body>
+
+<div class="page-transition" id="pg-transition"></div>
+
+<a class="back-btn" href="index.html" onclick="goHome(event)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    BACK TO HOME
+</a>
+
+    <h1>Sorting Efficiency Race</h1>
+    <p>Adjust the array size to see how O(n²) and O(n log n) scale differently.</p>
+
+    <div class="controls">
+        <div class="slider-group">
+            <label for="sizeSlider">Array Size: <span id="sizeVal">50</span></label>
+            <input type="range" id="sizeSlider" min="5" max="150" value="50" oninput="updateSize(this.value)">
+        </div>
+        <button onclick="startRace()">▶ Start Sorting</button>
+        <button class="reset" onclick="initGrids()">🎲 Shuffle Data</button>
+    </div>
+
+    <div class="grid-container">
+        <div class="algo-box"><div>Bubble Sort (O(n²))</div><div id="vis0" class="visualizer"></div><div id="stats0" class="stats"></div></div>
+        <div class="algo-box"><div>Selection Sort (O(n²))</div><div id="vis1" class="visualizer"></div><div id="stats1" class="stats"></div></div>
+        <div class="algo-box"><div>Merge Sort (O(n log n))</div><div id="vis2" class="visualizer"></div><div id="stats2" class="stats"></div></div>
+        <div class="algo-box"><div>Quick Sort (O(n log n))</div><div id="vis3" class="visualizer"></div><div id="stats3" class="stats"></div></div>
+    </div>
+
+    <div id="chartWrapper" class="chart-container">
+        <h2>Efficiency Analysis</h2>
+        <canvas id="sortingChart"></canvas>
+    </div>
+
+<script>
+    let ARRAY_SIZE = 50;
+    let datasets = [[], [], [], []];
+    let comparisons = [0, 0, 0, 0];
+    let times = [0, 0, 0, 0];
+    let finishedCount = 0;
+    let isSorting = false;
+    let myChart = null;
+
+    function updateSize(val) {
+        ARRAY_SIZE = parseInt(val);
+        document.getElementById('sizeVal').innerText = val;
+        initGrids();
+    }
+
+    function initGrids() {
+        if(isSorting) return;
+        const masterData = Array.from({length: ARRAY_SIZE}, () => Math.floor(Math.random() * 95) + 5);
+        for(let i=0; i<4; i++) {
+            datasets[i] = [...masterData];
+            comparisons[i] = 0;
+            times[i] = 0;
+            updateStats(i);
+            render(i);
+        }
+        finishedCount = 0;
+        document.getElementById('chartWrapper').style.display = 'none';
+    }
+
+    function render(idx, activeIndices = []) {
+        const container = document.getElementById(`vis${idx}`);
+        container.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        
+        datasets[idx].forEach((val, i) => {
+            const numBox = document.createElement('div');
+            numBox.className = 'num-box';
+            numBox.innerText = val;
+            
+            if (ARRAY_SIZE > 100) {
+                numBox.style.fontSize = '0.65rem';
+                numBox.style.padding = '2px';
+                numBox.style.minWidth = '18px';
+            }
+
+            if (activeIndices.includes(i)) numBox.classList.add('highlight');
+            frag.appendChild(numBox);
+        });
+        container.appendChild(frag);
+    }
+
+    function updateStats(idx) {
+        // Increased decimal precision so sub-millisecond times don't just show 0.0
+        document.getElementById(`stats${idx}`).innerText = `Comparisons: ${comparisons[idx]} | Time: ${Math.max(0, times[idx]).toFixed(2)}ms`;
+    }
+
+    const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+    async function bubbleSort() {
+        let arr = datasets[0];
+        let start = performance.now();
+        for (let i = 0; i < arr.length; i++) {
+            for (let j = 0; j < arr.length - i - 1; j++) {
+                comparisons[0]++;
+                if (arr[j] > arr[j + 1]) {
+                    [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                    if(ARRAY_SIZE < 60) render(0, [j, j + 1]);
+                }
+            }
+            if(ARRAY_SIZE >= 60) render(0);
+            times[0] = performance.now() - start;
+            updateStats(0);
+            await sleep(1);
+        }
+        finalize(0);
+    }
+
+    async function selectionSort() {
+        let arr = datasets[1];
+        let start = performance.now();
+        for (let i = 0; i < arr.length; i++) {
+            let min = i;
+            for (let j = i + 1; j < arr.length; j++) {
+                comparisons[1]++;
+                if (arr[j] < arr[min]) min = j;
+            }
+            [arr[i], arr[min]] = [arr[min], arr[i]];
+            render(1, [i, min]);
+            times[1] = performance.now() - start;
+            updateStats(1);
+            await sleep(ARRAY_SIZE > 50 ? 5 : 20);
+        }
+        finalize(1);
+    }
+
+    async function mergeSort() {
+        let start = performance.now();
+        await mSort(datasets[2], 0, datasets[2].length - 1);
+        times[2] = performance.now() - start;
+        finalize(2);
+    }
+
+    async function mSort(arr, l, r) {
+        if (l >= r) return;
+        const m = Math.floor((l + r) / 2);
+        await mSort(arr, l, m);
+        await mSort(arr, m + 1, r);
+        await merge(arr, l, m, r);
+    }
+
+    async function merge(arr, l, m, r) {
+        let left = arr.slice(l, m + 1);
+        let right = arr.slice(m + 1, r + 1);
+        let i = 0, j = 0, k = l;
+        while (i < left.length && j < right.length) {
+            comparisons[2]++;
+            if (left[i] <= right[j]) arr[k++] = left[i++];
+            else arr[k++] = right[j++];
+            updateStats(2);
+            if(ARRAY_SIZE < 70) { render(2, [k]); await sleep(10); }
+        }
+        while (i < left.length) arr[k++] = left[i++];
+        while (j < right.length) arr[k++] = right[j++];
+        render(2);
+        await sleep(20);
+    }
+
+    async function quickSort() {
+        let start = performance.now();
+        await qSort(datasets[3], 0, datasets[3].length - 1);
+        times[3] = performance.now() - start;
+        finalize(3);
+    }
+
+    async function qSort(arr, low, high) {
+        if (low < high) {
+            let pi = await partition(arr, low, high);
+            await qSort(arr, low, pi - 1);
+            await qSort(arr, pi + 1, high);
+        }
+    }
+
+    async function partition(arr, low, high) {
+        let pivot = arr[high];
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+            comparisons[3]++;
+            if (arr[j] < pivot) {
+                i++;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                if(ARRAY_SIZE < 70) { render(3, [i, j]); await sleep(5); }
+            }
+            updateStats(3);
+        }
+        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+        render(3);
+        return i + 1;
+    }
+
+    function finalize(idx) {
+        finishedCount++;
+        updateStats(idx); // FORCE UI to update with the final computed time
+        render(idx);
+        if (finishedCount === 4) {
+            isSorting = false;
+            showChart();
+        }
+    }
+
+    function showChart() {
+        document.getElementById('chartWrapper').style.display = 'block';
+        const ctx = document.getElementById('sortingChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["Bubble (n²)", "Selection (n²)", "Merge (n log n)", "Quick (n log n)"],
+                datasets: [{ label: 'Comparisons', data: comparisons, backgroundColor: '#e67e22' },
+                            { label: 'Time (ms)', data: times.map(t => Math.max(0, t).toFixed(2)), backgroundColor: '#2ecc71' }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: '#444' } } } }
+        });
+    }
+
+    function startRace() {
+        if(isSorting) return;
+        isSorting = true;
+        finishedCount = 0; // RESET THIS so subsequent runs don't lock the shuffle button
+        document.getElementById('chartWrapper').style.display = 'none';
+        bubbleSort(); selectionSort(); mergeSort(); quickSort();
+    }
+
+    function goHome(e) {
+        e.preventDefault();
+        const t = document.getElementById('pg-transition');
+        t.classList.add('active');
+        setTimeout(() => { window.location.href = 'index.html'; }, 350);
+    }
+
+    initGrids();
+</script>
+</body>
+</html>
